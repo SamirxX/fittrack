@@ -868,14 +868,21 @@ function renderProgress() {
   else if (xp >= 10000) { rank = "Steel Competent"; icon = "🦾"; }
   document.getElementById('rank-title').textContent = rank; document.getElementById('rank-icon').textContent = icon;
 
-  const exs = [...new Set(logs.filter(l => l.exerciseType!=='Cardio_Treadmill').map(l => l.exercise))];
+  const hasCardio = logs.some(l => l.cardioData && l.cardioData.calories > 0);
+  const exs = [...(hasCardio ? ['🔥 Calories'] : []), ...new Set(logs.filter(l => !l.exerciseType || !l.exerciseType.startsWith('Cardio_')).map(l => l.exercise))];
   const t = document.getElementById('prog-tabs'); t.innerHTML = '';
   if(exs.length === 0) { document.getElementById('chart-container').innerHTML = `<div class="no-data-msg"><span>No tracking history compiled.</span></div>`; return; }
   if(!state.currentProgTab || !exs.includes(state.currentProgTab)) state.currentProgTab = exs[0];
   exs.forEach(ex => {
     const el = document.createElement('div'); el.className = 'prog-tab' + (ex===state.currentProgTab?' active':''); el.textContent = ex; el.onclick = () => { state.currentProgTab = ex; renderProgress(); }; t.appendChild(el);
   });
-  renderChart(state.currentProgTab, logs.filter(l => l.exercise === state.currentProgTab));
+  if (state.currentProgTab === '🔥 Calories') {
+    const dailyCals = {};
+    logs.forEach(l => { if(l.cardioData && l.cardioData.calories > 0) dailyCals[l.date] = (dailyCals[l.date]||0) + parseFloat(l.cardioData.calories); });
+    renderChart('🔥 Calories', Object.keys(dailyCals).sort().map(d => ({ date: d, cal: dailyCals[d] })));
+  } else {
+    renderChart(state.currentProgTab, logs.filter(l => l.exercise === state.currentProgTab));
+  }
 }
 
 /* ============================================================
@@ -923,11 +930,16 @@ function renderExerciseList() {
 }
 
 function renderChart(en, el) {
-  const c = document.getElementById('chart-container'); c.innerHTML = `<div class="chart-title">${escapeHTML(en)} Progression</div><div class="chart-wrap"><canvas id="progress-chart"></canvas></div>`;
-  const pts = el.map(l => { const ms = l.sets.reduce((b, s) => { const w = parseFloat(s.weight)||0; const r = parseFloat(s.reps)||0; return (w*r)>(b.w*b.r)?{w,r}:b; }, { w:0, r:0 }); return { date: l.date.substring(5), e1rm: ms.w > 0 ? ms.w * (1 + ms.r / 30) : ms.r }; });
+  const c = document.getElementById('chart-container'); c.innerHTML = `<div class="chart-title">${escapeHTML(en)} ${en==='🔥 Calories'?'Burned':'Progression'}</div><div class="chart-wrap"><canvas id="progress-chart"></canvas></div>`;
+  let pts;
+  if(en === '🔥 Calories') {
+    pts = el.map(l => ({ date: l.date.substring(5), val: l.cal }));
+  } else {
+    pts = el.map(l => { const ms = l.sets.reduce((b, s) => { const w = parseFloat(s.weight)||0; const r = parseFloat(s.reps)||0; return (w*r)>(b.w*b.r)?{w,r}:b; }, { w:0, r:0 }); return { date: l.date.substring(5), val: ms.w > 0 ? ms.w * (1 + ms.r / 30) : ms.r }; });
+  }
   if (state.progressChart) state.progressChart.destroy(); const ctx = document.getElementById('progress-chart').getContext('2d');
   let g = ctx.createLinearGradient(0, 0, 0, 240); g.addColorStop(0, 'rgba(6,182,212,0.25)'); g.addColorStop(1, 'rgba(6,182,212,0.0)');
-  state.progressChart = new Chart(ctx, { type: 'line', data: { labels: pts.map(p => p.date), datasets: [{ data: pts.map(p => p.e1rm.toFixed(1)), borderColor: '#06b6d4', backgroundColor: g, borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: '#06b6d4', pointBorderColor: '#0d0d16', pointRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { weight: '700' } } }, y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#94a3b8', font: { weight: '700' } } } } } });
+  state.progressChart = new Chart(ctx, { type: 'line', data: { labels: pts.map(p => p.date), datasets: [{ data: pts.map(p => p.val.toFixed(1)), borderColor: '#06b6d4', backgroundColor: g, borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: '#06b6d4', pointBorderColor: '#0d0d16', pointRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { weight: '700' } } }, y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#94a3b8', font: { weight: '700' } } } } } });
 }
 
 function renderHistory() {
@@ -957,7 +969,8 @@ function renderHistory() {
       details += `<div class="hist-ex-item"><div class="hist-ex-name">${escapeHTML(en)}</div>${rows}</div>`;
     }
     const card = document.createElement('div'); card.className = 'neo-card hist-card stagger-item';
-    card.innerHTML = `<div class="hist-summary" onclick="toggleHistDetails(${idx})"><div><div class="hist-date">${s.date}</div><div class="hist-title">${escapeHTML(s.routineName)}</div><div class="hist-stats"><div class="hist-stat">${s.totalSets || 0} <span>Sets</span></div><div class="hist-stat">${Math.floor(s.totalVol || 0)}kg <span>Vol</span></div></div></div><svg id="arrow-${idx}" class="hist-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></div><div id="details-${idx}" class="hist-details">${details || '<div style="font-size:12px;color:var(--text-tertiary);margin-top:12px;">No specific parameters verified.</div>'}</div>`;
+    const calStat = s.totalCal > 0 ? `<div class="hist-stat">${Math.round(s.totalCal)} <span>kcal</span></div>` : '';
+    card.innerHTML = `<div class="hist-summary" onclick="toggleHistDetails(${idx})"><div><div class="hist-date">${s.date}</div><div class="hist-title">${escapeHTML(s.routineName)}</div><div class="hist-stats"><div class="hist-stat">${s.totalSets || 0} <span>Sets</span></div><div class="hist-stat">${Math.floor(s.totalVol || 0)}kg <span>Vol</span></div>${calStat}</div></div><svg id="arrow-${idx}" class="hist-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></div><div id="details-${idx}" class="hist-details">${details || '<div style="font-size:12px;color:var(--text-tertiary);margin-top:12px;">No specific parameters verified.</div>'}</div>`;
     l.appendChild(card);
   });
 }
@@ -1110,9 +1123,12 @@ function finishSession() {
   if (btn.classList.contains('disabled')) return showToast('⚠️ Log at least one metric first');
   const sessionLog = { type: 'session_complete', id: Date.now(), date: state.selectedDay.dateStr, routineId: state.selectedDay.id, routineName: state.selectedDay.name, muscles: state.selectedDay.muscles };
   const todayLogs = DB.logs().filter(l => l.date === state.selectedDay.dateStr && l.routineId === state.selectedDay.id && l.type !== 'session_complete');
-  let sSets = 0, sVol = 0;
-  todayLogs.forEach(l => { if(l.sets) { sSets += l.sets.length; l.sets.forEach(s => { if(s.weight && s.reps) sVol += (parseFloat(s.weight) * parseInt(s.reps)); }); } });
-  sessionLog.totalSets = sSets; sessionLog.totalVol = sVol;
+  let sSets = 0, sVol = 0, sCal = 0;
+  todayLogs.forEach(l => { 
+      if(l.sets) { sSets += l.sets.length; l.sets.forEach(s => { if(s.weight && s.reps) sVol += (parseFloat(s.weight) * parseInt(s.reps)); }); }
+      if(l.cardioData && l.cardioData.calories) sCal += parseFloat(l.cardioData.calories);
+  });
+  sessionLog.totalSets = sSets; sessionLog.totalVol = sVol; sessionLog.totalCal = sCal;
   DB.addLog(sessionLog);
 
   const cycleState = DB.cycleState();
