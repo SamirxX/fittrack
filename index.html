@@ -326,15 +326,17 @@
     </div>
 
     <div class="neo-card stagger-item" style="margin: 24px; padding: 24px;">
-      <div style="font-size: 16px; font-weight: 900; margin-bottom: 12px; color: var(--text-primary);">Data Storage Intercept</div>
-      <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px; font-weight: 600;">Export logs to plain-text backup configurations, or restore an interface profile.</div>
+      <div style="font-size: 16px; font-weight: 900; margin-bottom: 12px; color: var(--text-primary);">Data Storage</div>
+      <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px; font-weight: 600;">Export your logs as a backup, or restore a previous profile.</div>
       <div style="display:flex; flex-direction:column; gap:10px;">
         <button class="btn-secondary" style="color: var(--accent-blue);" onclick="exportData()">⬇️ Export Log History (.txt)</button>
-        <button class="btn-secondary" style="color: var(--accent-green);" onclick="document.getElementById('import-file').click()">⬆️ Import Log Profile</button>
-        <input type="file" id="import-file" style="display:none" accept=".txt" onchange="importData(event)">
+        <label class="btn-secondary" style="color: var(--accent-green); cursor:pointer; text-align:center;">
+          ⬆️ Import Log Profile
+          <input type="file" id="import-file" style="display:none;position:absolute;width:0;height:0;" accept=".txt,.json" onchange="importData(event)">
+        </label>
       </div>
       <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(225,29,72,0.2);">
-        <button class="btn-secondary" style="color: var(--accent-rose); background: rgba(225,29,72,0.03); border-color: rgba(225,29,72,0.15);" onclick="wipeAllData()">Wipe All Data Clean</button>
+        <button class="btn-secondary" style="color: var(--accent-rose); background: rgba(225,29,72,0.03); border-color: rgba(225,29,72,0.15);" onclick="showWipeModal()">🗑️ Wipe All Data</button>
       </div>
     </div>
   </div>
@@ -476,6 +478,18 @@
   <div class="ascend-title" id="ascend-title-text">YOU HAVE ASCENDED</div>
   <div style="font-size:16px; font-weight:600; color:var(--text-secondary); max-width:280px; margin-bottom:32px; line-height:1.5;" id="ascend-desc">Your operational limits have forced a progression checkpoint upgrade.</div>
   <button class="btn-primary" style="max-width:200px;" onclick="document.getElementById('ascension-modal').style.display='none'">Acknowledge Upgrade</button>
+</div>
+
+<div class="modal-overlay" id="wipe-confirm-modal">
+  <div class="modal-content" style="text-align:center;">
+    <div style="font-size:48px; margin-bottom:16px;">🗑️</div>
+    <div class="modal-title" style="color:var(--accent-rose);">Wipe All Data?</div>
+    <div style="font-size:14px; color:var(--text-secondary); margin-bottom:24px; line-height:1.6;">This will permanently delete all your logs, cycles, progress, and custom plans. This cannot be undone.</div>
+    <div class="modal-actions">
+      <button class="btn-secondary" style="flex:1;" onclick="document.getElementById('wipe-confirm-modal').classList.remove('show')">Cancel</button>
+      <button class="btn-primary" style="flex:1; background:linear-gradient(135deg,var(--accent-rose),#9f1239);" onclick="confirmWipe()">Yes, Wipe Everything</button>
+    </div>
+  </div>
 </div>
 
 <div class="nav-bar" id="nav-bar">
@@ -696,7 +710,7 @@ const BASE_EXERCISES = {
   'Core': [ { name:'Plank', type:'Calisthenics', focus:'Core Stability', emoji:'⬛', key:'plank' }, { name:'Russian Twists', type:'Bodyweight', focus:'Obliques', emoji:'🔀', key:'russian_twist' } ],
   'Arms': [ { name:'Barbell Curl', type:'Barbell', focus:'Biceps', emoji:'💪', key:'arm_bb_curl' }, { name:'Tricep Pushdown', type:'Cable', focus:'Triceps', emoji:'↓', key:'arm_tri_push' } ],
   'Legs': [ { name:'Barbell Squat', type:'Barbell', focus:'Total Legs', emoji:'🏋️', key:'legs_squat' }, { name:'Romanian Deadlift', type:'Barbell', focus:'Hamstrings', emoji:'🔧', key:'legs_rdl' } ],
-  'Cardio': [ { name:'Treadmill (Walk/Run)', type:'Cardio_Treadmill', focus:'Endurance / Metabolic Burn', emoji:'🏃', key:'treadmill' }, { name:'Stationary Bike', type:'Cardio_Bike', focus:'Endurance', emoji:'🚴', key:'bike' }, { name:'Stairmaster', type:'Cardio_Stair', focus:'Glutes', emoji:'🧗', key:'stairs' } ]
+  'Cardio': [ { name:'Treadmill (Walk/Run)', type:'Cardio_Treadmill', focus:'Endurance / Metabolic Burn', emoji:'🏃', key:'treadmill' }, { name:'Stationary Bike', type:'Cardio_Bike', focus:'Low-Impact Endurance', emoji:'🚴', key:'bike' }, { name:'Stairmaster', type:'Cardio_Stair', focus:'Glutes & Cardio', emoji:'🧗', key:'stairs' }, { name:'Jump Rope', type:'Cardio_Jump', focus:'Full Body / Coordination', emoji:'🪢', key:'jump_rope' } ]
 };
 
 function buildCombinedPlans() {
@@ -768,7 +782,9 @@ function updateDashboardTracking() {
   });
   
   let tv = 0; DB.logs().forEach(l => { if(l.type!=='session_complete'&&l.sets){ l.sets.forEach(s => { if(s.weight&&s.reps) tv += (parseFloat(s.weight)*parseInt(s.reps)); }); } });
-  document.getElementById('cycles-count').textContent = DB.cyclesCompleted(); document.getElementById('total-vol-count').innerHTML = `${Math.floor(tv/1000)}k<span>kg</span>`;
+  document.getElementById('cycles-count').textContent = DB.cyclesCompleted();
+  const tvDisplay = tv >= 1000 ? `${(tv/1000).toFixed(1)}k<span>kg</span>` : `${Math.floor(tv)}<span>kg</span>`;
+  document.getElementById('total-vol-count').innerHTML = tvDisplay;
 }
 function openDayRoutine(r) { state.selectedDay = { ...r, dateStr: formatDateStr(new Date()) }; document.getElementById('day-badge').textContent = PLANS[state.plan]?.name || 'Split'; document.getElementById('day-title').textContent = r.name; buildMuscleGrid(r.muscles, state.selectedDay.dateStr); navigateTo('screen-day'); }
 function buildMuscleGrid(muscles, ds) {
@@ -801,8 +817,8 @@ function saveLog(isAuto = false) {
   
   let e = { id: currentSessionLogId, date: state.selectedDay.dateStr, routineId: state.selectedDay.id, muscle: state.selectedMuscle, exercise: state.selectedExercise.name, exerciseKey: state.selectedExercise.key, exerciseType: state.selectedExercise.type, notes: document.getElementById('log-notes').value, bw: DB.bw() };
   
-  if (state.selectedExercise.type === 'Cardio_Treadmill') {
-      if(!cardioData.time && !cardioData.speed && !isAuto) return showToast('⚠️ Metrics missing');
+  if (state.selectedExercise.type.startsWith('Cardio_')) {
+      if(!cardioData.time && !isAuto) return showToast('⚠️ Metrics missing');
       e.cardioData = {...cardioData};
   } else {
       const v = logSets.filter(s => s.reps && (s.weight || ['Calisthenics','Bodyweight'].includes(state.selectedExercise?.type)));
@@ -878,9 +894,9 @@ function openLog(ex) {
     document.getElementById('log-notes').value = ''; 
     const logs = DB.getLogsForExercise(ex.name); 
     const last = logs.length ? logs[logs.length-1]:null; 
-    if(ex.type==='Cardio_Treadmill'){ 
-        cardioData = last && last.cardioData ? {...last.cardioData, calories:0, fat:0}:{time:'',speed:'',incline:'',calories:0,fat:0}; 
-        renderCardioUI(); 
+    if(ex.type.startsWith('Cardio_')){ 
+        cardioData = last && last.cardioData ? {...last.cardioData, calories:0, fat:0}:{time:'',speed:'',incline:'',rate:'',calories:0,fat:0}; 
+        renderCardioUI(ex.type); 
     } else { 
         logSets = last && last.sets ? last.sets.map(s=>({...s})):[{reps:'',weight:'',unit:DB.bw().unit==='lbs'?'lbs':'kg'}]; 
         renderSetsUI(); 
@@ -926,7 +942,23 @@ function renderHistory() {
     const elMap = {}; DB.logs().filter(x => x.date === s.date && x.routineId === s.routineId && x.type !== 'session_complete').forEach(log => { if(!elMap[log.exercise]) elMap[log.exercise] = []; elMap[log.exercise].push(log); });
     let details = '';
     for(const [en, arr] of Object.entries(elMap)) {
-      let rows = ''; arr.forEach(log => { if(log.cardioData) rows += `<div class="hist-set-row"><span>Telemetry</span><span style="color:var(--accent-cyan); font-weight:800;">${log.cardioData.time}m • ${Math.round(log.cardioData.calories)}kcal</span></div>`; else if(log.sets) log.sets.forEach((set, i) => rows += `<div class="hist-set-row"><span>Set ${i+1}</span><span style="color:var(--accent-cyan); font-weight:800;">${set.weight ? set.weight+set.unit : 'BW'} × ${set.reps}</span></div>`); });
+      let rows = ''; arr.forEach(log => {
+        if(log.cardioData) {
+          const cd = log.cardioData;
+          if(log.exerciseType === 'Cardio_Jump') {
+            const jumps = cd.time && cd.speed ? Math.round(cd.time * cd.speed).toLocaleString() : '—';
+            rows += `<div class="hist-set-row"><span>Jump Rope</span><span style="color:var(--accent-cyan); font-weight:800;">${cd.time}min • ${jumps} jumps • ${Math.round(cd.calories||0)}kcal</span></div>`;
+          } else if(log.exerciseType === 'Cardio_Bike') {
+            rows += `<div class="hist-set-row"><span>Bike</span><span style="color:var(--accent-cyan); font-weight:800;">${cd.time}min • ${Math.round(cd.calories||0)}kcal</span></div>`;
+          } else if(log.exerciseType === 'Cardio_Stair') {
+            rows += `<div class="hist-set-row"><span>Stairmaster</span><span style="color:var(--accent-cyan); font-weight:800;">${cd.time}min • ${cd.speed||'?'} steps/min • ${Math.round(cd.calories||0)}kcal</span></div>`;
+          } else {
+            rows += `<div class="hist-set-row"><span>Cardio</span><span style="color:var(--accent-cyan); font-weight:800;">${cd.time}min • ${Math.round(cd.calories||0)}kcal</span></div>`;
+          }
+        } else if(log.sets) {
+          log.sets.forEach((set, i) => rows += `<div class="hist-set-row"><span>Set ${i+1}</span><span style="color:var(--accent-cyan); font-weight:800;">${set.weight ? set.weight+set.unit : 'BW'} × ${set.reps}</span></div>`);
+        }
+      });
       details += `<div class="hist-ex-item"><div class="hist-ex-name">${escapeHTML(en)}</div>${rows}</div>`;
     }
     const card = document.createElement('div'); card.className = 'neo-card hist-card stagger-item';
@@ -937,38 +969,126 @@ function renderHistory() {
 window.toggleHistDetails = function(index) { document.getElementById(`details-${index}`).classList.toggle('open'); document.getElementById(`arrow-${index}`).classList.toggle('open'); }
 function openMuscle(m) { state.selectedMuscle = m; document.getElementById('ex-badge').textContent = m; renderExerciseList(); navigateTo('screen-exercises'); }
 function saveCustomExercise() { const n = document.getElementById('ce-name').value.trim(); const f = document.getElementById('ce-focus').value.trim(); const t = document.getElementById('ce-type').value; if(!n || !f) return showToast("⚠️ Inputs parameter empty"); DB.addCustomExercise(state.selectedMuscle, { name: n, type: t, focus: f, emoji: '⚙️', key: 'custom_'+Date.now() }); document.getElementById('custom-ex-modal').classList.remove('show'); openMuscle(state.selectedMuscle); }
-function exportData() { const d = { logs: DB.logs(), cyclesCount: DB.cyclesCompleted(), cycleState: DB.cycleState(), customExercises: DB.customExercises(), customPlans: DB.customPlans() }; const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(d, null, 2)); a.download = "FitTrack_Backup.txt"; document.body.appendChild(a); a.click(); a.remove(); showToast('✅ Configuration Exported'); }
-function importData(e) { const r = new FileReader(); r.onload = function(ev) { try { const o = JSON.parse(ev.target.result); if(o.logs) DB.set('ft_logs', o.logs); if(o.cyclesCount!==undefined) DB.set('ft_cycles_count', o.cyclesCount); if(o.cycleState) DB.set('ft_cycle_state', o.cycleState); if(o.customExercises) DB.set('ft_custom_exercises', o.customExercises); if(o.customPlans) DB.set('ft_custom_plans', o.customPlans); showToast('⬆️ Interface Restored'); setTimeout(() => location.reload(), 1000); } catch(err) { showToast('❌ Read Error'); } }; r.readAsText(e.target.files[0]); }
-function wipeAllData() { if(confirm("Purge system metrics completely?")) { localStorage.clear(); showToast('🗑️ Cleared'); setTimeout(() => location.reload(), 1000); } }
+function exportData() { const d = { logs: DB.logs(), cyclesCount: DB.cyclesCompleted(), cycleState: DB.cycleState(), customExercises: DB.customExercises(), customPlans: DB.customPlans() }; const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(d, null, 2)); a.download = "FitTrack_Backup.json"; document.body.appendChild(a); a.click(); a.remove(); showToast('✅ Backup Exported'); }
+function importData(e) { const r = new FileReader(); r.onload = function(ev) { try { const o = JSON.parse(ev.target.result); if(o.logs) DB.set('ft_logs', o.logs); if(o.cyclesCount!==undefined) DB.set('ft_cycles_count', o.cyclesCount); if(o.cycleState) DB.set('ft_cycle_state', o.cycleState); if(o.customExercises) DB.set('ft_custom_exercises', o.customExercises); if(o.customPlans) DB.set('ft_custom_plans', o.customPlans); showToast('⬆️ Profile Restored!'); setTimeout(() => location.reload(), 1000); } catch(err) { showToast('❌ Invalid backup file'); } }; r.readAsText(e.target.files[0]); e.target.value=''; }
+function showWipeModal() { document.getElementById('wipe-confirm-modal').classList.add('show'); }
+function confirmWipe() { localStorage.clear(); showToast('🗑️ Data Wiped'); document.getElementById('wipe-confirm-modal').classList.remove('show'); setTimeout(() => location.reload(), 800); }
 
 /* Cardio & Set UI Generators */
-function renderCardioUI() {
+function renderCardioUI(cardioType) {
     const container = document.getElementById('log-dynamic-area'); document.getElementById('save-btn').style.display = 'block';
-    container.innerHTML = `
-      <div class="log-label">Treadmill Telemetry</div>
-      <div class="cardio-grid" style="margin-bottom:12px;">
-         <input class="modal-input" type="number" inputmode="decimal" id="c-time" placeholder="Time (min)" value="${cardioData.time}" oninput="updateCardioMath()">
-         <input class="modal-input" type="number" inputmode="decimal" id="c-speed" placeholder="Speed" value="${cardioData.speed}" oninput="updateCardioMath()">
-         <input class="modal-input" type="number" inputmode="decimal" id="c-incline" placeholder="Incline %" value="${cardioData.incline}" oninput="updateCardioMath()" style="grid-column: span 2;">
-      </div>
-      <div class="cardio-grid">
-          <div class="cardio-box"><div class="cardio-box-title">Energy Expended</div><div class="cardio-input-wrap"><span class="cardio-val" id="c-cal">0</span><span class="cardio-unit">kcal</span></div></div>
-          <div class="cardio-box"><div class="cardio-box-title">Tissue Mass Burned</div><div class="cardio-input-wrap"><span class="cardio-val" id="c-fat" style="color:var(--accent-rose);">0.0</span><span class="cardio-unit">g</span></div></div>
-      </div>
-    `; updateCardioMath();
+    
+    if (cardioType === 'Cardio_Bike') {
+        container.innerHTML = `
+          <div class="log-label">🚴 Stationary Bike</div>
+          <div class="cardio-grid" style="margin-bottom:12px;">
+             <input class="modal-input" type="number" inputmode="decimal" id="c-time" placeholder="Duration (min)" value="${cardioData.time||''}" oninput="updateCardioMath('bike')">
+             <input class="modal-input" type="number" inputmode="decimal" id="c-speed" placeholder="RPM / Level" value="${cardioData.speed||''}" oninput="updateCardioMath('bike')">
+             <input class="modal-input" type="number" inputmode="decimal" id="c-incline" placeholder="Resistance Level" value="${cardioData.incline||''}" oninput="updateCardioMath('bike')" style="grid-column: span 2;">
+          </div>
+          <div class="cardio-grid">
+              <div class="cardio-box"><div class="cardio-box-title">Calories Burned</div><div class="cardio-input-wrap"><span class="cardio-val" id="c-cal">0</span><span class="cardio-unit">kcal</span></div></div>
+              <div class="cardio-box"><div class="cardio-box-title">Fat Burned</div><div class="cardio-input-wrap"><span class="cardio-val" id="c-fat" style="color:var(--accent-rose);">0.0</span><span class="cardio-unit">g</span></div></div>
+          </div>
+        `;
+    } else if (cardioType === 'Cardio_Stair') {
+        container.innerHTML = `
+          <div class="log-label">🧗 Stairmaster</div>
+          <div class="cardio-grid" style="margin-bottom:12px;">
+             <input class="modal-input" type="number" inputmode="decimal" id="c-time" placeholder="Duration (min)" value="${cardioData.time||''}" oninput="updateCardioMath('stair')">
+             <input class="modal-input" type="number" inputmode="decimal" id="c-speed" placeholder="Steps/min" value="${cardioData.speed||''}" oninput="updateCardioMath('stair')">
+          </div>
+          <div class="cardio-grid">
+              <div class="cardio-box"><div class="cardio-box-title">Calories Burned</div><div class="cardio-input-wrap"><span class="cardio-val" id="c-cal">0</span><span class="cardio-unit">kcal</span></div></div>
+              <div class="cardio-box"><div class="cardio-box-title">Fat Burned</div><div class="cardio-input-wrap"><span class="cardio-val" id="c-fat" style="color:var(--accent-rose);">0.0</span><span class="cardio-unit">g</span></div></div>
+          </div>
+        `;
+    } else if (cardioType === 'Cardio_Jump') {
+        container.innerHTML = `
+          <div class="log-label">🪢 Jump Rope</div>
+          <div class="cardio-grid" style="margin-bottom:12px;">
+             <input class="modal-input" type="number" inputmode="decimal" id="c-time" placeholder="Duration (min)" value="${cardioData.time||''}" oninput="updateCardioMath('jump')">
+             <input class="modal-input" type="number" inputmode="decimal" id="c-speed" placeholder="Jumps/min (avg)" value="${cardioData.speed||''}" oninput="updateCardioMath('jump')">
+          </div>
+          <div class="cardio-grid">
+              <div class="cardio-box"><div class="cardio-box-title">Total Jumps</div><div class="cardio-input-wrap"><span class="cardio-val" id="c-cal">0</span><span class="cardio-unit">jumps</span></div></div>
+              <div class="cardio-box"><div class="cardio-box-title">Calories Burned</div><div class="cardio-input-wrap"><span class="cardio-val" id="c-fat" style="color:var(--accent-rose);">0</span><span class="cardio-unit">kcal</span></div></div>
+          </div>
+        `;
+    } else {
+        // Default: Treadmill
+        container.innerHTML = `
+          <div class="log-label">Treadmill Telemetry</div>
+          <div class="cardio-grid" style="margin-bottom:12px;">
+             <input class="modal-input" type="number" inputmode="decimal" id="c-time" placeholder="Time (min)" value="${cardioData.time||''}" oninput="updateCardioMath('treadmill')">
+             <input class="modal-input" type="number" inputmode="decimal" id="c-speed" placeholder="Speed (km/h)" value="${cardioData.speed||''}" oninput="updateCardioMath('treadmill')">
+             <input class="modal-input" type="number" inputmode="decimal" id="c-incline" placeholder="Incline %" value="${cardioData.incline||''}" oninput="updateCardioMath('treadmill')" style="grid-column: span 2;">
+          </div>
+          <div class="cardio-grid">
+              <div class="cardio-box"><div class="cardio-box-title">Energy Expended</div><div class="cardio-input-wrap"><span class="cardio-val" id="c-cal">0</span><span class="cardio-unit">kcal</span></div></div>
+              <div class="cardio-box"><div class="cardio-box-title">Fat Burned</div><div class="cardio-input-wrap"><span class="cardio-val" id="c-fat" style="color:var(--accent-rose);">0.0</span><span class="cardio-unit">g</span></div></div>
+          </div>
+        `;
+    }
+    updateCardioMath(cardioType === 'Cardio_Bike' ? 'bike' : cardioType === 'Cardio_Stair' ? 'stair' : cardioType === 'Cardio_Jump' ? 'jump' : 'treadmill');
 }
 
-function updateCardioMath() {
+function updateCardioMath(mode) {
     triggerTrackingDebounce();
-    const t = parseFloat(document.getElementById('c-time').value) || 0; const s = parseFloat(document.getElementById('c-speed').value) || 0; const i = parseFloat(document.getElementById('c-incline').value) || 0;
+    const t = parseFloat(document.getElementById('c-time')?.value) || 0;
+    const s = parseFloat(document.getElementById('c-speed')?.value) || 0;
+    const i = parseFloat(document.getElementById('c-incline')?.value) || 0;
     cardioData.time = t; cardioData.speed = s; cardioData.incline = i;
-    if (t > 0 && s > 0) {
-        const isLbs = DB.bw().unit === 'lbs'; const weightKg = isLbs ? DB.bw().weight / 2.20462 : DB.bw().weight; const speedMph = isLbs ? s : s * 0.621371; const speedMmin = speedMph * 26.8224;
-        let vo2 = speedMph > 4.5 ? 3.5 + (0.2 * speedMmin) + (0.9 * speedMmin * (i/100)) : 3.5 + (0.1 * speedMmin) + (1.8 * speedMmin * (i/100));
-        let met = vo2 / 3.5; let calories = met * weightKg * 0.0175 * t; let fatGrams = calories / 7.7;
-        cardioData.calories = calories; cardioData.fat = fatGrams;
-        document.getElementById('c-cal').textContent = Math.round(calories); document.getElementById('c-fat').textContent = fatGrams.toFixed(1);
-    } else { document.getElementById('c-cal').textContent = '0'; document.getElementById('c-fat').textContent = '0.0'; }
+    
+    const isLbs = DB.bw().unit === 'lbs';
+    const weightKg = isLbs ? DB.bw().weight / 2.20462 : DB.bw().weight;
+
+    if (mode === 'bike') {
+        if (t > 0) {
+            const met = s > 0 ? Math.min(3 + s * 0.05, 12) : 5.5;
+            const cal = met * weightKg * 0.0175 * t;
+            cardioData.calories = cal; cardioData.fat = cal / 7.7;
+            document.getElementById('c-cal').textContent = Math.round(cal);
+            document.getElementById('c-fat').textContent = (cal / 7.7).toFixed(1);
+        }
+    } else if (mode === 'stair') {
+        if (t > 0 && s > 0) {
+            const met = 6 + (s / 100) * 2;
+            const cal = met * weightKg * 0.0175 * t;
+            cardioData.calories = cal; cardioData.fat = cal / 7.7;
+            document.getElementById('c-cal').textContent = Math.round(cal);
+            document.getElementById('c-fat').textContent = (cal / 7.7).toFixed(1);
+        }
+    } else if (mode === 'jump') {
+        if (t > 0 && s > 0) {
+            const totalJumps = Math.round(t * s);
+            const met = 11.0;
+            const cal = met * weightKg * 0.0175 * t;
+            cardioData.calories = cal; cardioData.rate = s;
+            document.getElementById('c-cal').textContent = totalJumps.toLocaleString();
+            document.getElementById('c-fat').textContent = Math.round(cal);
+        } else if (t > 0) {
+            const met = 11.0;
+            const cal = met * weightKg * 0.0175 * t;
+            cardioData.calories = cal;
+            document.getElementById('c-cal').textContent = '—';
+            document.getElementById('c-fat').textContent = Math.round(cal);
+        }
+    } else {
+        // Treadmill
+        if (t > 0 && s > 0) {
+            const speedMph = isLbs ? s : s * 0.621371;
+            const speedMmin = speedMph * 26.8224;
+            let vo2 = speedMph > 4.5 ? 3.5 + (0.2 * speedMmin) + (0.9 * speedMmin * (i/100)) : 3.5 + (0.1 * speedMmin) + (1.8 * speedMmin * (i/100));
+            let met = vo2 / 3.5; let calories = met * weightKg * 0.0175 * t; let fatGrams = calories / 7.7;
+            cardioData.calories = calories; cardioData.fat = fatGrams;
+            document.getElementById('c-cal').textContent = Math.round(calories);
+            document.getElementById('c-fat').textContent = fatGrams.toFixed(1);
+        } else {
+            if(document.getElementById('c-cal')) document.getElementById('c-cal').textContent = '0';
+            if(document.getElementById('c-fat')) document.getElementById('c-fat').textContent = '0.0';
+        }
+    }
 }
 
 function renderSetsUI() {
@@ -1023,7 +1143,7 @@ const defaultLogs = [
   { id: 2, date: INJECT_DATE, routineId: 'ant', muscle: 'Chest', exercise: 'Machine Pec Deck Fly', exerciseKey: 'mach_pec_deck', exerciseType: 'Machine', sets: [{weight:54, reps:9, unit:'kg'}, {weight:54, reps:5, unit:'kg'}] },
   { type: 'session_complete', id: 11, date: INJECT_DATE, routineId: 'ant', routineName: 'Anterior', muscles: ['Chest','Quads','Shoulders','Triceps','Abs','Cardio'], totalSets: 19, totalVol: 4883 }
 ];
-function bootstrapData() { if (!localStorage.getItem('ft_initialized')) { localStorage.setItem('ft_plan', JSON.stringify('ap')); localStorage.setItem('ft_cycle_state', JSON.stringify(['ant'])); localStorage.setItem('ft_logs', JSON.stringify(defaultLogs)); localStorage.setItem('ft_custom_exercises', JSON.stringify({})); localStorage.setItem('ft_custom_plans', JSON.stringify({})); localStorage.setItem('ft_initialized', 'true'); } }
+function bootstrapData() { if (!localStorage.getItem('ft_initialized')) { localStorage.setItem('ft_plan', JSON.stringify('ap')); localStorage.setItem('ft_cycle_state', JSON.stringify(['ant'])); localStorage.setItem('ft_cycles_count', JSON.stringify(0)); localStorage.setItem('ft_logs', JSON.stringify(defaultLogs)); localStorage.setItem('ft_custom_exercises', JSON.stringify({})); localStorage.setItem('ft_custom_plans', JSON.stringify({})); localStorage.setItem('ft_initialized', 'true'); } }
 bootstrapData();
 
 function init() {
