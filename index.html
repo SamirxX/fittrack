@@ -488,18 +488,7 @@
       <div class="section-sub">Completed cycle checkpoints and detailed weights</div>
     </div>
     
-    <div class="neo-card stagger-item" style="margin: 0 20px 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--cyan);">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div style="color:var(--cyan); font-weight:700; font-size:1.1rem;">☁️ Cloud Sync</div>
-          <div style="color:var(--text-tertiary); font-size:0.8rem;">Backup to Firebase</div>
-        </div>
-      </div>
-      <div style="display:flex; gap:10px;">
-        <button class="btn-primary" onclick="window.backupToCloud()" style="flex:1; padding:10px; font-size:0.9rem;">Backup Now</button>
-        <button class="btn-secondary" onclick="window.restoreFromCloud()" style="flex:1; padding:10px; font-size:0.9rem;">Restore</button>
-      </div>
-    </div>
+
 
     <div class="hist-list" id="hist-list"></div>
   </div>
@@ -1395,72 +1384,6 @@ init();
    ============================================================ */
 </script>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAY_P8JMIEJYegQOLsT2i5es8-UZ3js2O8",
-    authDomain: "fittrack-e3f46.firebaseapp.com",
-    projectId: "fittrack-e3f46",
-    storageBucket: "fittrack-e3f46.firebasestorage.app",
-    messagingSenderId: "80192017851",
-    appId: "1:80192017851:web:b2ac1232f3b51a8c91a09e"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  window.backupToCloud = async function() {
-    try {
-      if(typeof showToast === 'function') showToast('⏳ Syncing to Cloud...');
-      const payload = {
-        logs: typeof DB !== 'undefined' ? DB.logs() : [],
-        cyclesCount: typeof DB !== 'undefined' ? DB.cyclesCompleted() : 0,
-        cycleState: typeof DB !== 'undefined' ? DB.cycleState() : [],
-        customExercises: typeof DB !== 'undefined' ? DB.customExercises() : {},
-        customPlans: typeof DB !== 'undefined' ? DB.customPlans() : {},
-        updatedAt: new Date().toISOString()
-      };
-      
-      const timeoutReq = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout! Firebase is blocked or database isn't created.")), 8000));
-      await Promise.race([ setDoc(doc(db, "users", "samir_backup"), payload), timeoutReq ]);
-      
-      if(typeof showToast === 'function') showToast('☁️ CLOUD BACKUP SUCCESS!');
-      else alert('☁️ Backup Saved to Firebase Cloud!');
-    } catch(err) {
-      console.error("Firebase Backup Error:", err);
-      alert("Cloud Backup Error: " + err.message);
-    }
-  };
-
-  window.restoreFromCloud = async function() {
-    try {
-      if(typeof showToast === 'function') showToast('⏳ Restoring from Cloud...');
-      const docRef = doc(db, "users", "samir_backup");
-      
-      const timeoutReq = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout! Firebase is blocked or database isn't created.")), 8000));
-      const docSnap = await Promise.race([ getDoc(docRef), timeoutReq ]);
-      
-      if (docSnap.exists && docSnap.exists()) {
-        const data = docSnap.data();
-        if(data.logs) localStorage.setItem('ft_logs', JSON.stringify(data.logs));
-        if(data.cyclesCount !== undefined) localStorage.setItem('ft_cycles_count', JSON.stringify(data.cyclesCount));
-        if(data.cycleState) localStorage.setItem('ft_cycle_state', JSON.stringify(data.cycleState));
-        if(data.customExercises) localStorage.setItem('ft_custom_exercises', JSON.stringify(data.customExercises));
-        if(data.customPlans) localStorage.setItem('ft_custom_plans', JSON.stringify(data.customPlans));
-        
-        if(typeof showToast === 'function') showToast('✅ CLOUD RESTORE SUCCESS!');
-        alert('✅ Restored from Cloud! Reloading page...');
-        window.location.reload();
-      } else {
-        alert("No backup found in cloud yet. Click 'Backup Now' first!");
-      }
-    } catch(err) {
-      console.error("Firebase Restore Error:", err);
-      alert("Cloud Restore Error: " + err.message);
-    }
-  };
-</script>
 </body>
 </html>
