@@ -496,8 +496,8 @@
         </div>
       </div>
       <div style="display:flex; gap:10px;">
-        <button class="btn-primary" onclick="alert('Firebase not configured. Add API keys in index.html to enable cloud sync.')" style="flex:1; padding:10px; font-size:0.9rem;">Backup Now</button>
-        <button class="btn-secondary" onclick="alert('Firebase not configured.')" style="flex:1; padding:10px; font-size:0.9rem;">Restore</button>
+        <button class="btn-primary" onclick="window.backupToCloud()" style="flex:1; padding:10px; font-size:0.9rem;">Backup Now</button>
+        <button class="btn-secondary" onclick="window.restoreFromCloud()" style="flex:1; padding:10px; font-size:0.9rem;">Restore</button>
       </div>
     </div>
 
@@ -1391,26 +1391,70 @@ init();
 })();
 
 /* ============================================================
-   FIREBASE CLOUD SYNC (STUB)
+   FIREBASE CLOUD SYNC LIVE INTEGRATION
    ============================================================ */
-// To enable cloud sync, include Firebase SDKs in the <head> and initialize here:
-// <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-// <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+</script>
 
-// function initFirebase() {
-//   const app = firebase.initializeApp(firebaseConfig);
-//   const db = firebase.firestore(app);
-// }
-// window.backupToCloud = async () => { ... }
-// window.restoreFromCloud = async () => { ... }
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAY_P8JMIEJYegQOLsT2i5es8-UZ3js2O8",
+    authDomain: "fittrack-e3f46.firebaseapp.com",
+    projectId: "fittrack-e3f46",
+    storageBucket: "fittrack-e3f46.firebasestorage.app",
+    messagingSenderId: "80192017851",
+    appId: "1:80192017851:web:b2ac1232f3b51a8c91a09e"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.backupToCloud = async function() {
+    try {
+      if(typeof showToast === 'function') showToast('⏳ Syncing to Cloud...');
+      const payload = {
+        logs: typeof DB !== 'undefined' ? DB.logs() : [],
+        cyclesCount: typeof DB !== 'undefined' ? DB.cyclesCompleted() : 0,
+        cycleState: typeof DB !== 'undefined' ? DB.cycleState() : [],
+        customExercises: typeof DB !== 'undefined' ? DB.customExercises() : {},
+        customPlans: typeof DB !== 'undefined' ? DB.customPlans() : {},
+        updatedAt: new Date().toISOString()
+      };
+      await setDoc(doc(db, "users", "samir_backup"), payload);
+      if(typeof showToast === 'function') showToast('☁️ CLOUD BACKUP SUCCESS!');
+      else alert('☁️ Backup Saved to Firebase Cloud!');
+    } catch(err) {
+      console.error("Firebase Backup Error:", err);
+      alert("Cloud Backup Error: " + err.message);
+    }
+  };
+
+  window.restoreFromCloud = async function() {
+    try {
+      if(typeof showToast === 'function') showToast('⏳ Restoring from Cloud...');
+      const docRef = doc(db, "users", "samir_backup");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if(data.logs) localStorage.setItem('ft_logs', JSON.stringify(data.logs));
+        if(data.cyclesCount !== undefined) localStorage.setItem('ft_cycles_count', JSON.stringify(data.cyclesCount));
+        if(data.cycleState) localStorage.setItem('ft_cycle_state', JSON.stringify(data.cycleState));
+        if(data.customExercises) localStorage.setItem('ft_custom_exercises', JSON.stringify(data.customExercises));
+        if(data.customPlans) localStorage.setItem('ft_custom_plans', JSON.stringify(data.customPlans));
+        
+        if(typeof showToast === 'function') showToast('✅ CLOUD RESTORE SUCCESS!');
+        alert('✅ Restored from Cloud! Reloading page...');
+        window.location.reload();
+      } else {
+        alert("No backup found in cloud yet. Click 'Backup Now' first!");
+      }
+    } catch(err) {
+      console.error("Firebase Restore Error:", err);
+      alert("Cloud Restore Error: " + err.message);
+    }
+  };
 </script>
 </body>
 </html>
