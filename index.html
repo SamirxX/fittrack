@@ -1422,7 +1422,10 @@ init();
         customPlans: typeof DB !== 'undefined' ? DB.customPlans() : {},
         updatedAt: new Date().toISOString()
       };
-      await setDoc(doc(db, "users", "samir_backup"), payload);
+      
+      const timeoutReq = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout! Firebase is blocked or database isn't created.")), 8000));
+      await Promise.race([ setDoc(doc(db, "users", "samir_backup"), payload), timeoutReq ]);
+      
       if(typeof showToast === 'function') showToast('☁️ CLOUD BACKUP SUCCESS!');
       else alert('☁️ Backup Saved to Firebase Cloud!');
     } catch(err) {
@@ -1435,8 +1438,11 @@ init();
     try {
       if(typeof showToast === 'function') showToast('⏳ Restoring from Cloud...');
       const docRef = doc(db, "users", "samir_backup");
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
+      
+      const timeoutReq = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout! Firebase is blocked or database isn't created.")), 8000));
+      const docSnap = await Promise.race([ getDoc(docRef), timeoutReq ]);
+      
+      if (docSnap.exists && docSnap.exists()) {
         const data = docSnap.data();
         if(data.logs) localStorage.setItem('ft_logs', JSON.stringify(data.logs));
         if(data.cyclesCount !== undefined) localStorage.setItem('ft_cycles_count', JSON.stringify(data.cyclesCount));
