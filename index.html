@@ -1122,8 +1122,11 @@ function renderProgress() {
     // Draw sparkline
     setTimeout(() => {
       const canvas = card.querySelector('canvas');
-      if (!canvas || values.length < 2) return;
+      if (!canvas || values.length === 0) return;
       const ctx2 = canvas.getContext('2d');
+      // Ensure canvas has dimensions, wait if 0
+      if (canvas.offsetWidth === 0) return;
+      
       const w2 = canvas.width = canvas.offsetWidth * 2;
       const h2 = canvas.height = canvas.offsetHeight * 2;
       ctx2.scale(2, 2);
@@ -1136,11 +1139,17 @@ function renderProgress() {
       ctx2.lineWidth = 2;
       ctx2.lineJoin = 'round';
       ctx2.lineCap = 'round';
-      values.forEach((v, i) => {
-        const x = (i / (values.length - 1)) * cw;
-        const y = ch - ((v - minV) / range) * ch;
-        if (i === 0) ctx2.moveTo(x, y); else ctx2.lineTo(x, y);
-      });
+      
+      if (values.length === 1) {
+        ctx2.moveTo(0, ch/2);
+        ctx2.lineTo(cw, ch/2);
+      } else {
+        values.forEach((v, i) => {
+          const x = (i / (values.length - 1)) * cw;
+          const y = ch - ((v - minV) / range) * ch;
+          if (i === 0) ctx2.moveTo(x, y); else ctx2.lineTo(x, y);
+        });
+      }
       ctx2.stroke();
 
       ctx2.lineTo(cw, ch);
@@ -1151,7 +1160,15 @@ function renderProgress() {
       grad.addColorStop(1, 'rgba(234,179,8,0)');
       ctx2.fillStyle = grad;
       ctx2.fill();
-    }, 50);
+      
+      // Draw a dot for the latest value
+      const lastX = cw;
+      const lastY = values.length === 1 ? ch/2 : ch - ((values[values.length-1] - minV) / range) * ch;
+      ctx2.beginPath();
+      ctx2.arc(lastX - 3, lastY, 3, 0, Math.PI * 2);
+      ctx2.fillStyle = '#eab308';
+      ctx2.fill();
+    }, 150);
   });
 
   renderHeatmap();
@@ -1187,49 +1204,60 @@ function openExerciseDetail(name, sessions, emoji) {
   `;
 
   if (detailChart) detailChart.destroy();
-  const ctx = document.getElementById('ep-detail-chart-canvas').getContext('2d');
-  let g = ctx.createLinearGradient(0, 0, 0, 220);
-  g.addColorStop(0, 'rgba(234,179,8,0.25)');
-  g.addColorStop(1, 'rgba(234,179,8,0)');
-  detailChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: dates.map(d => d.substring(5)),
-      datasets: [{
-        data: values,
-        borderColor: '#eab308',
-        backgroundColor: g,
-        borderWidth: 3,
-        fill: true,
-        tension: 0.4,
-        pointBackgroundColor: '#eab308',
-        pointBorderColor: '#0f0f0f',
-        pointBorderWidth: 2,
-        pointRadius: 5,
-        pointHoverRadius: 8
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#1a1a1a',
-          borderColor: 'rgba(255,255,255,0.1)',
-          borderWidth: 1,
-          titleColor: '#eab308',
-          bodyColor: '#999',
-          padding: 12,
-          callbacks: { label: (c) => `${c.raw} ${bw.unit}` }
-        }
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: '#999', font: { weight: '700', size: 11 } } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#999', font: { weight: '700', size: 11 } } }
-      }
+  setTimeout(() => {
+    const ctx = document.getElementById('ep-detail-chart-canvas').getContext('2d');
+    let g = ctx.createLinearGradient(0, 0, 0, 220);
+    g.addColorStop(0, 'rgba(234,179,8,0.25)');
+    g.addColorStop(1, 'rgba(234,179,8,0)');
+    
+    // Add logic for single point graph (Chart.js doesn't draw points natively on a 1-point dataset without this config change or 2nd point)
+    let displayData = values;
+    let displayLabels = dates.map(d => d.substring(5));
+    if (values.length === 1) {
+       displayData = [values[0], values[0]];
+       displayLabels = [displayLabels[0], displayLabels[0]];
     }
-  });
+
+    detailChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: displayLabels,
+        datasets: [{
+          data: displayData,
+          borderColor: '#eab308',
+          backgroundColor: g,
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#eab308',
+          pointBorderColor: '#0f0f0f',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1a1a1a',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            titleColor: '#eab308',
+            bodyColor: '#999',
+            padding: 12,
+            callbacks: { label: (c) => `${c.raw} ${bw.unit}` }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#999', font: { weight: '700', size: 11 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#999', font: { weight: '700', size: 11 } } }
+        }
+      }
+    });
+  }, 100);
 }
 
 function closeExerciseDetail() {
