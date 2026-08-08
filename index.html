@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="FitTrack Pro">
 <meta name="theme-color" content="#080808">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>FitTrack Pro</title>
 
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='115' fill='%23ffffff'/%3E%3Cpath d='M256 112L384 256L256 400L128 256L256 112Z' fill='url(%23grad)'/%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233B82F6'/%3E%3Cstop offset='100%25' stop-color='%2306B6D4'/%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E">
@@ -1767,6 +1770,14 @@ const defaultLogs = [
 ];
 function bootstrapData() { if (!localStorage.getItem('ft_initialized')) { localStorage.setItem('ft_plan', JSON.stringify('ap')); localStorage.setItem('ft_cycle_state', JSON.stringify(['ant'])); localStorage.setItem('ft_cycles_count', JSON.stringify(0)); localStorage.setItem('ft_logs', JSON.stringify(defaultLogs)); localStorage.setItem('ft_custom_exercises', JSON.stringify({})); localStorage.setItem('ft_custom_plans', JSON.stringify({})); localStorage.setItem('ft_initialized', 'true'); } }
 bootstrapData();
+
+// Clear any stale Service Worker or Cache Storage to ensure fresh GitHub Pages updates
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => { for(let r of regs) r.unregister(); });
+}
+if ('caches' in window) {
+  caches.keys().then(names => { for(let n of names) caches.delete(n); });
+}
 
 function init() {
   // Hide nav and header until a screen is chosen
