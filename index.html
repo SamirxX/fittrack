@@ -214,18 +214,47 @@
   .cardio-val  { font-size: 24px; font-weight: 900; color: var(--accent-gold); }
   .cardio-unit { font-size: 13px; font-weight: 700; color: var(--text-tertiary); }
 
-  /* PROGRESS */
+  /* PROGRESS / ANALYTICS */
   #screen-progress .prog-header { padding: 10px 24px 16px; }
-  .level-card { padding: 24px; margin: 0 24px 20px; display: flex; flex-direction: column; gap: 16px; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.06); }
-  .rpg-title  { font-size: 13px; font-weight: 900; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 1px; }
-  .rpg-level  { font-size: 44px; font-weight: 900; color: var(--text-primary); letter-spacing: -1.5px; line-height: 1; }
-  .rpg-xp-bar { height: 10px; background: rgba(255,255,255,0.06); border-radius: 6px; overflow: hidden; }
-  .rpg-xp-fill { height: 100%; background: linear-gradient(90deg, #eab308, #f59e0b); border-radius: 6px; transition: width 0.6s ease; box-shadow: 0 0 12px rgba(234,179,8,0.5); }
-  .rpg-xp-text { font-size: 12px; font-weight: 800; color: var(--text-secondary); text-align: right; margin-top: 6px; }
 
-  .prog-tabs { display: flex; gap: 10px; padding: 0 24px 20px; overflow-x: auto; scrollbar-width: none; }
-  .prog-tab { padding: 10px 20px; border-radius: var(--radius-pill); white-space: nowrap; font-size: 14px; font-weight: 700; cursor: pointer; background: #1e1e1e; border: 1px solid rgba(255,255,255,0.06); color: var(--text-secondary); transition: var(--transition); }
-  .prog-tab.active { background: #eab308; border-color: transparent; color: #000; font-weight: 900; }
+  .analytics-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 24px 20px; }
+  .analytics-stat { background: var(--bg-card); border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius-card); padding: 18px; }
+  .analytics-stat-label { font-size: 11px; font-weight: 800; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .analytics-stat-value { font-size: 28px; font-weight: 900; color: var(--text-primary); letter-spacing: -1px; }
+  .analytics-stat-value span { font-size: 13px; font-weight: 700; color: var(--text-tertiary); margin-left: 2px; }
+
+  .exercise-progress-list { display: flex; flex-direction: column; gap: 12px; padding: 0 24px 20px; }
+  .exercise-progress-card { background: var(--bg-card); border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius-card); padding: 16px 18px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: var(--transition); }
+  .exercise-progress-card:active { transform: scale(0.98); }
+  .ep-icon { width: 42px; height: 42px; border-radius: 14px; background: #222; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .ep-info { flex: 1; min-width: 0; }
+  .ep-name { font-size: 14px; font-weight: 800; color: var(--text-primary); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ep-meta { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+  .ep-sparkline { width: 70px; height: 32px; flex-shrink: 0; }
+  .ep-max { text-align: right; flex-shrink: 0; min-width: 56px; }
+  .ep-max-val { font-size: 18px; font-weight: 900; color: var(--text-primary); letter-spacing: -0.5px; }
+  .ep-max-unit { font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
+
+  .strength-badge { display: inline-flex; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; letter-spacing: 0.3px; text-transform: uppercase; }
+  .strength-badge.beginner { background: rgba(156,163,175,0.15); color: #9ca3af; }
+  .strength-badge.novice { background: rgba(52,211,153,0.15); color: #34d399; }
+  .strength-badge.intermediate { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .strength-badge.advanced { background: rgba(168,85,247,0.15); color: #a855f7; }
+  .strength-badge.elite { background: rgba(234,179,8,0.2); color: #eab308; }
+
+  .ep-detail-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1100; display: none; flex-direction: column; padding: 0; }
+  .ep-detail-overlay.show { display: flex; }
+  .ep-detail-header { padding: 20px 24px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .ep-detail-back { width: 36px; height: 36px; border-radius: 12px; background: #222; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-primary); }
+  .ep-detail-title { font-size: 18px; font-weight: 900; color: var(--text-primary); }
+  .ep-detail-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .ep-detail-chart { height: 220px; position: relative; margin-bottom: 20px; }
+  .ep-detail-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .ep-detail-stat { background: #222; border-radius: 14px; padding: 14px; text-align: center; }
+  .ep-detail-stat-label { font-size: 10px; font-weight: 800; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .ep-detail-stat-value { font-size: 20px; font-weight: 900; color: var(--text-primary); }
+
+  .section-heading { font-size: 13px; font-weight: 900; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.8px; padding: 0 24px 12px; }
 
   .chart-container { margin: 0 24px 20px; padding: 24px; }
   .chart-title { font-size: 16px; font-weight: 900; margin-bottom: 20px; color: var(--text-primary); display: flex; justify-content: space-between; align-items: center; }
@@ -452,32 +481,32 @@
   </div>
 
   <div class="screen" id="screen-progress">
-    <div class="neo-card level-card stagger-item">
-      <div class="rpg-title">Your Progression Matrix</div>
-      <div class="rpg-level" id="rpg-level">Level 1</div>
-      <div>
-        <div class="rpg-xp-bar"><div class="rpg-xp-fill" id="rpg-xp-fill" style="width: 0%;"></div></div>
-        <div class="rpg-xp-text" id="rpg-xp-text">0 / 1000 xp</div>
-      </div>
-    </div>
-    
-    <div class="neo-card level-card stagger-item" style="margin-top:-10px; padding:16px 24px; display:flex; flex-direction:row; align-items:center; gap:16px;">
-        <div id="rank-icon" style="font-size:32px;">⛓️</div>
-        <div>
-            <div style="font-size:11px; font-weight:800; color:var(--text-tertiary); text-transform:uppercase;">Verified Strength Ranking</div>
-            <div id="rank-title" style="font-size:18px; font-weight:900; color:var(--text-primary);">Iron Novice</div>
-        </div>
+    <div style="padding: 10px 24px 16px;">
+      <h1 class="section-title">Analytics</h1>
+      <div class="section-sub">Your strength progress</div>
     </div>
 
-    <div class="prog-tabs stagger-item" id="prog-tabs"></div>
-    <div class="neo-card chart-container stagger-item" id="chart-container">
-      <div class="chart-title" id="chart-title">Load Performance Line</div>
-      <div class="chart-wrap"><canvas id="progress-chart"></canvas></div>
-    </div>
-    
-    <div class="neo-card chart-container stagger-item" id="heatmap-container" style="margin-top:20px; padding:20px; text-align:center;">
-      <div class="chart-title" style="margin-bottom:12px;">Muscle Fatigue Heatmap (7 Days)</div>
+    <div class="analytics-summary" id="analytics-summary"></div>
+
+    <div class="section-heading" style="margin-top:4px;">Exercise Progress</div>
+    <div class="exercise-progress-list" id="exercise-progress-list"></div>
+
+    <div class="section-heading" style="margin-top:8px;">Muscle Activity (7 Days)</div>
+    <div class="neo-card chart-container stagger-item" id="heatmap-container" style="padding:20px; text-align:center;">
       <div id="heatmap-visual" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;"></div>
+    </div>
+  </div>
+
+  <div class="ep-detail-overlay" id="ep-detail-overlay">
+    <div class="ep-detail-header">
+      <div class="ep-detail-back" onclick="closeExerciseDetail()">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"></polyline></svg>
+      </div>
+      <div class="ep-detail-title" id="ep-detail-title"></div>
+    </div>
+    <div class="ep-detail-body">
+      <div class="ep-detail-chart"><canvas id="ep-detail-chart-canvas"></canvas></div>
+      <div class="ep-detail-stats" id="ep-detail-stats"></div>
     </div>
   </div>
 
@@ -940,49 +969,273 @@ function triggerAscensionSequence(title, subtitle, emoji) {
 /* ============================================================
    ANALYTICS POWER LIFTER RATING PARSER
    ============================================================ */
+/* ============================================================
+   STRENGTH STANDARDS (bodyweight multiplier thresholds)
+   Based on established strength standards per exercise.
+   Each key maps to [Beginner, Novice, Intermediate, Advanced, Elite] BW multipliers.
+   ============================================================ */
+const STRENGTH_STANDARDS = {
+  'Bench Press':       [0.50, 0.75, 1.00, 1.25, 1.50],
+  'Flat Bench Press':  [0.50, 0.75, 1.00, 1.25, 1.50],
+  'Incline Bench Press':[0.40, 0.60, 0.85, 1.10, 1.35],
+  'Decline Bench Press':[0.45, 0.70, 0.95, 1.20, 1.45],
+  'Overhead Press':    [0.35, 0.50, 0.65, 0.85, 1.05],
+  'Military Press':    [0.35, 0.50, 0.65, 0.85, 1.05],
+  'Shoulder Press':    [0.35, 0.50, 0.65, 0.85, 1.05],
+  'Barbell Squat':     [0.65, 1.00, 1.35, 1.70, 2.10],
+  'Back Squat':        [0.65, 1.00, 1.35, 1.70, 2.10],
+  'Front Squat':       [0.55, 0.80, 1.10, 1.40, 1.70],
+  'Conventional Deadlift':[0.75, 1.10, 1.50, 1.90, 2.35],
+  'Deadlift':          [0.75, 1.10, 1.50, 1.90, 2.35],
+  'Sumo Deadlift':     [0.75, 1.10, 1.50, 1.90, 2.35],
+  'Romanian Deadlift': [0.55, 0.80, 1.10, 1.40, 1.70],
+  'Barbell Row':       [0.45, 0.65, 0.85, 1.10, 1.35],
+  'Bent Over Row':     [0.45, 0.65, 0.85, 1.10, 1.35],
+  'Pendlay Row':       [0.45, 0.65, 0.85, 1.10, 1.35],
+  'Lat Pulldown':      [0.40, 0.55, 0.75, 0.95, 1.15],
+  'Pull Up':           [0.00, 0.00, 0.10, 0.30, 0.50],
+  'Dumbbell Curl':     [0.10, 0.15, 0.22, 0.30, 0.40],
+  'Barbell Curl':      [0.20, 0.30, 0.45, 0.60, 0.75],
+  'Tricep Pushdown':   [0.15, 0.25, 0.35, 0.50, 0.65],
+  'Dumbbell Press':    [0.15, 0.25, 0.35, 0.50, 0.65],
+  'Lateral Raise':     [0.05, 0.10, 0.15, 0.22, 0.30],
+  'Leg Press':         [1.00, 1.50, 2.20, 3.00, 3.80],
+  'Leg Extension':     [0.25, 0.40, 0.55, 0.70, 0.90],
+  'Leg Curl':          [0.20, 0.35, 0.50, 0.65, 0.80],
+  'Calf Raise':        [0.50, 0.80, 1.20, 1.60, 2.00],
+};
+const TIER_NAMES = ['Beginner', 'Novice', 'Intermediate', 'Advanced', 'Elite'];
+const TIER_CLASSES = ['beginner', 'novice', 'intermediate', 'advanced', 'elite'];
+
+function getStrengthTier(exerciseName, maxWeight) {
+  const bw = DB.bw().weight || 75;
+  const ratio = maxWeight / bw;
+  let stds = STRENGTH_STANDARDS[exerciseName];
+  if (!stds) {
+    const key = Object.keys(STRENGTH_STANDARDS).find(k => exerciseName.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(exerciseName.toLowerCase()));
+    stds = key ? STRENGTH_STANDARDS[key] : null;
+  }
+  if (!stds) return { tier: -1, name: '', cls: '' };
+  for (let i = stds.length - 1; i >= 0; i--) { if (ratio >= stds[i]) return { tier: i, name: TIER_NAMES[i], cls: TIER_CLASSES[i] }; }
+  return { tier: 0, name: 'Beginner', cls: 'beginner' };
+}
+
 function renderProgress() {
   const logs = DB.logs().filter(l => l.type !== 'session_complete');
-  let v = 0; logs.forEach(l => { if(l.sets) l.sets.forEach(s => { if(s.weight&&s.reps) v += (parseFloat(s.weight)*parseInt(s.reps)); }); });
-  const cc = DB.cyclesCompleted(); const xp = v + (cc * 10000); const lvl = Math.floor(xp / 10000) + 1;
-  document.getElementById('rpg-level').textContent = `Level ${lvl}`;
-  document.getElementById('rpg-xp-fill').style.width = `${((xp % 10000)/10000)*100}%`;
-  document.getElementById('rpg-xp-text').textContent = `${Math.floor(xp%10000).toLocaleString()} / 10,000 XP`;
+  const bw = DB.bw();
 
-  let rank = "Iron Novice"; let icon = "⛓️";
-  if (xp >= 1500000 || lvl >= 50) { rank = "Alpha Ascendant"; icon = "👑"; }
-  else if (xp >= 500000) { rank = "Golden Titan"; icon = "🔱"; }
-  else if (xp >= 150000) { rank = "Silver Overlord"; icon = "🛡️"; }
-  else if (xp >= 50000) { rank = "Bronze Gladiator"; icon = "⚔️"; }
-  else if (xp >= 10000) { rank = "Steel Competent"; icon = "🦾"; }
-  document.getElementById('rank-title').textContent = rank; document.getElementById('rank-icon').textContent = icon;
-
-  // Build tabs from split routines (Anterior, Posterior, etc.) + Calories
-  buildCombinedPlans();
-  const planCfg = PLANS[DB.plan()] || PLANS['ap'];
-  const splitTabs = planCfg.routines.filter(r => r.id !== 'rest').map(r => r.name);
-  const hasCardio = logs.some(l => l.cardioData && l.cardioData.calories > 0);
-  const allTabs = [...splitTabs, ...(hasCardio ? ['🔥 Calories'] : [])];
-  const t = document.getElementById('prog-tabs'); t.innerHTML = '';
-  if(allTabs.length === 0) { document.getElementById('chart-container').innerHTML = `<div class="no-data-msg"><span>No tracking history compiled.</span></div>`; return; }
-  if(!state.currentProgTab || !allTabs.includes(state.currentProgTab)) state.currentProgTab = allTabs[0];
-  allTabs.forEach(tab => {
-    const el = document.createElement('div'); el.className = 'prog-tab' + (tab===state.currentProgTab?' active':''); el.textContent = tab; el.onclick = () => { state.currentProgTab = tab; renderProgress(); }; t.appendChild(el);
+  // Calculate summary stats
+  let totalVolume = 0; const totalExercises = new Set();
+  logs.forEach(l => {
+    totalExercises.add(l.exercise);
+    if (l.sets) l.sets.forEach(s => { const w = parseFloat(s.weight)||0, r = parseFloat(s.reps)||0; if (w && r) totalVolume += w * r; });
   });
-  if (state.currentProgTab === '🔥 Calories') {
-    const dailyCals = {};
-    logs.forEach(l => { if(l.cardioData && l.cardioData.calories > 0) dailyCals[l.date] = (dailyCals[l.date]||0) + parseFloat(l.cardioData.calories); });
-    renderChart('🔥 Calories', Object.keys(dailyCals).sort().map(d => ({ date: d, cal: dailyCals[d] })));
-  } else {
-    // Find the routineId for this split name
-    const matchedRoutine = planCfg.routines.find(r => r.name === state.currentProgTab);
-    const routineId = matchedRoutine ? matchedRoutine.id : null;
-    const sessionLogs = routineId ? logs.filter(l => l.routineId === routineId) : logs;
-    renderChart(state.currentProgTab, sessionLogs);
+  const sessionDates = new Set(DB.logs().filter(l => l.type === 'session_complete').map(l => l.date));
+  const totalSessions = sessionDates.size;
+
+  // Summary cards
+  const summaryEl = document.getElementById('analytics-summary');
+  if (summaryEl) summaryEl.innerHTML = `
+    <div class="analytics-stat">
+      <div class="analytics-stat-label">Sessions</div>
+      <div class="analytics-stat-value">${totalSessions}</div>
+    </div>
+    <div class="analytics-stat">
+      <div class="analytics-stat-label">Total Volume</div>
+      <div class="analytics-stat-value">${totalVolume >= 1000 ? (totalVolume/1000).toFixed(1) : Math.round(totalVolume)}<span>${totalVolume >= 1000 ? 'T' : bw.unit}</span></div>
+    </div>
+    <div class="analytics-stat">
+      <div class="analytics-stat-label">Exercises</div>
+      <div class="analytics-stat-value">${totalExercises.size}</div>
+    </div>
+    <div class="analytics-stat">
+      <div class="analytics-stat-label">Bodyweight</div>
+      <div class="analytics-stat-value">${bw.weight}<span>${bw.unit}</span></div>
+    </div>
+  `;
+
+  // Build per-exercise data
+  const exerciseMap = {};
+  logs.forEach(l => {
+    if (!l.exercise || !l.sets || l.sets.length === 0) return;
+    if (!exerciseMap[l.exercise]) exerciseMap[l.exercise] = { name: l.exercise, sessions: {}, muscle: l.muscle || '', emoji: '' };
+    const maxW = Math.max(...l.sets.map(s => parseFloat(s.weight) || 0));
+    if (maxW > 0) {
+      if (!exerciseMap[l.exercise].sessions[l.date] || maxW > exerciseMap[l.exercise].sessions[l.date]) {
+        exerciseMap[l.exercise].sessions[l.date] = maxW;
+      }
+    }
+  });
+
+  // Find emoji
+  for (const exName of Object.keys(exerciseMap)) {
+    for (const muscle of Object.keys(BASE_EXERCISES)) {
+      const found = BASE_EXERCISES[muscle].find(e => e.name === exName);
+      if (found) { exerciseMap[exName].emoji = found.emoji || ''; break; }
+    }
+    if (!exerciseMap[exName].emoji) {
+      const customs = JSON.parse(localStorage.getItem('ft_custom_exercises') || '[]');
+      const found = customs.find(c => c.name === exName);
+      if (found) exerciseMap[exName].emoji = found.emoji || '';
+    }
   }
-  
+
+  const listEl = document.getElementById('exercise-progress-list');
+  if (!listEl) return;
+  const exercises = Object.values(exerciseMap).filter(e => Object.keys(e.sessions).length > 0);
+  exercises.sort((a, b) => Math.max(...Object.values(b.sessions)) - Math.max(...Object.values(a.sessions)));
+
+  if (exercises.length === 0) {
+    listEl.innerHTML = '<div class="no-data-msg"><span>No exercise data logged yet.</span></div>';
+    renderHeatmap();
+    return;
+  }
+
+  listEl.innerHTML = '';
+  exercises.forEach(ex => {
+    const dates = Object.keys(ex.sessions).sort();
+    const values = dates.map(d => ex.sessions[d]);
+    const currentMax = Math.max(...values);
+    const tier = getStrengthTier(ex.name, currentMax);
+    const unit = bw.unit || 'kg';
+
+    const card = document.createElement('div');
+    card.className = 'exercise-progress-card';
+    card.onclick = () => openExerciseDetail(ex.name, ex.sessions, ex.emoji);
+
+    const tierBadge = tier.tier >= 0 ? `<span class="strength-badge ${tier.cls}">${tier.name}</span>` : '';
+    const safeId = ex.name.replace(/[^a-zA-Z0-9]/g,'_');
+    card.innerHTML = `
+      <div class="ep-icon">${ex.emoji || '\u2699\uFE0F'}</div>
+      <div class="ep-info">
+        <div class="ep-name">${escapeHTML(ex.name)}</div>
+        <div class="ep-meta">${tierBadge}<span>${dates.length} session${dates.length!==1?'s':''}</span></div>
+      </div>
+      <canvas class="ep-sparkline" id="spark-${safeId}"></canvas>
+      <div class="ep-max">
+        <div class="ep-max-val">${currentMax}</div>
+        <div class="ep-max-unit">${unit}</div>
+      </div>
+    `;
+    listEl.appendChild(card);
+
+    // Draw sparkline
+    setTimeout(() => {
+      const canvas = card.querySelector('canvas');
+      if (!canvas || values.length < 2) return;
+      const ctx2 = canvas.getContext('2d');
+      const w2 = canvas.width = canvas.offsetWidth * 2;
+      const h2 = canvas.height = canvas.offsetHeight * 2;
+      ctx2.scale(2, 2);
+      const cw = canvas.offsetWidth, ch = canvas.offsetHeight;
+      const minV = Math.min(...values) * 0.9, maxV = Math.max(...values) * 1.1;
+      const range = maxV - minV || 1;
+
+      ctx2.beginPath();
+      ctx2.strokeStyle = '#eab308';
+      ctx2.lineWidth = 2;
+      ctx2.lineJoin = 'round';
+      ctx2.lineCap = 'round';
+      values.forEach((v, i) => {
+        const x = (i / (values.length - 1)) * cw;
+        const y = ch - ((v - minV) / range) * ch;
+        if (i === 0) ctx2.moveTo(x, y); else ctx2.lineTo(x, y);
+      });
+      ctx2.stroke();
+
+      ctx2.lineTo(cw, ch);
+      ctx2.lineTo(0, ch);
+      ctx2.closePath();
+      const grad = ctx2.createLinearGradient(0, 0, 0, ch);
+      grad.addColorStop(0, 'rgba(234,179,8,0.2)');
+      grad.addColorStop(1, 'rgba(234,179,8,0)');
+      ctx2.fillStyle = grad;
+      ctx2.fill();
+    }, 50);
+  });
+
   renderHeatmap();
 }
 
+let detailChart = null;
+function openExerciseDetail(name, sessions, emoji) {
+  const overlay = document.getElementById('ep-detail-overlay');
+  document.getElementById('ep-detail-title').textContent = (emoji ? emoji + ' ' : '') + name;
+  overlay.classList.add('show');
+
+  const dates = Object.keys(sessions).sort();
+  const values = dates.map(d => sessions[d]);
+  const currentMax = Math.max(...values);
+  const bw = DB.bw();
+  const tier = getStrengthTier(name, currentMax);
+  const improvement = values.length >= 2 ? values[values.length-1] - values[0] : 0;
+
+  const statsEl = document.getElementById('ep-detail-stats');
+  statsEl.innerHTML = `
+    <div class="ep-detail-stat">
+      <div class="ep-detail-stat-label">Current Max</div>
+      <div class="ep-detail-stat-value">${currentMax}<span style="font-size:12px;color:var(--text-tertiary);"> ${bw.unit}</span></div>
+    </div>
+    <div class="ep-detail-stat">
+      <div class="ep-detail-stat-label">${tier.tier >= 0 ? 'Rank' : 'Sessions'}</div>
+      <div class="ep-detail-stat-value" style="font-size:${tier.tier >= 0 ? '14' : '20'}px;">${tier.tier >= 0 ? '<span class="strength-badge ' + tier.cls + '" style="font-size:12px;padding:4px 10px;">' + tier.name + '</span>' : dates.length}</div>
+    </div>
+    <div class="ep-detail-stat">
+      <div class="ep-detail-stat-label">Progress</div>
+      <div class="ep-detail-stat-value" style="color:${improvement >= 0 ? '#34d399' : '#f43f5e'}">${improvement >= 0 ? '+' : ''}${improvement}<span style="font-size:12px;color:var(--text-tertiary);"> ${bw.unit}</span></div>
+    </div>
+  `;
+
+  if (detailChart) detailChart.destroy();
+  const ctx = document.getElementById('ep-detail-chart-canvas').getContext('2d');
+  let g = ctx.createLinearGradient(0, 0, 0, 220);
+  g.addColorStop(0, 'rgba(234,179,8,0.25)');
+  g.addColorStop(1, 'rgba(234,179,8,0)');
+  detailChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates.map(d => d.substring(5)),
+      datasets: [{
+        data: values,
+        borderColor: '#eab308',
+        backgroundColor: g,
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#eab308',
+        pointBorderColor: '#0f0f0f',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1a1a',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#eab308',
+          bodyColor: '#999',
+          padding: 12,
+          callbacks: { label: (c) => `${c.raw} ${bw.unit}` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#999', font: { weight: '700', size: 11 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#999', font: { weight: '700', size: 11 } } }
+      }
+    }
+  });
+}
+
+function closeExerciseDetail() {
+  document.getElementById('ep-detail-overlay').classList.remove('show');
+  if (detailChart) { detailChart.destroy(); detailChart = null; }
+}
 function renderHeatmap() {
   const container = document.getElementById('heatmap-visual');
   container.innerHTML = '';
@@ -1076,7 +1329,7 @@ function renderExerciseList() {
 }
 
 function renderChart(en, el) {
-  const c = document.getElementById('chart-container');
+  const c = document.getElementById('chart-container'); if(!c) return;
   const isCalories = en === '\uD83D\uDD25 Calories';
   let title = isCalories ? '\uD83D\uDD25 Calories Burned' : '\uD83D\uDCCA Volume Progression';
   c.innerHTML = `<div class="chart-title">${escapeHTML(title)}</div><div class="chart-wrap"><canvas id="progress-chart"></canvas></div>`;
