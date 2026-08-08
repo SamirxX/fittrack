@@ -1074,9 +1074,11 @@ function renderProgress() {
       if (found) { exerciseMap[exName].emoji = found.emoji || ''; break; }
     }
     if (!exerciseMap[exName].emoji) {
-      const customs = JSON.parse(localStorage.getItem('ft_custom_exercises') || '[]');
-      const found = customs.find(c => c.name === exName);
-      if (found) exerciseMap[exName].emoji = found.emoji || '';
+      const customs = DB.customExercises();
+      for (const muscle of Object.keys(customs)) {
+        const found = customs[muscle].find(c => c.name === exName);
+        if (found) { exerciseMap[exName].emoji = found.emoji || ''; break; }
+      }
     }
   }
 
