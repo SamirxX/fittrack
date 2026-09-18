@@ -365,6 +365,9 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
   }
   .timer-btn.cancel { color: #ef4444; margin-top: 5px; border-color: rgba(239,68,68,0.3); }
+
+  .prog-tab { padding: 6px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius-pill); font-size: 13px; font-weight: 600; color: var(--text-tertiary); cursor: pointer; transition: var(--transition); white-space: nowrap; }
+  .prog-tab.active { background: rgba(234, 179, 8, 0.1); border-color: var(--accent-gold); color: var(--accent-gold); }
 </style>
 </head>
 <body>
@@ -822,7 +825,7 @@ const DEFAULT_PLANS = {
 
 let PLANS = {};
 
-.prog-tab { padding: 6px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius-pill); font-size: 13px; font-weight: 600; color: var(--text-tertiary); cursor: pointer; transition: var(--transition); white-space: nowrap; } .prog-tab.active { background: rgba(234, 179, 8, 0.1); border-color: var(--accent-gold); color: var(--accent-gold); }
+
 /* COMPREHENSIVE MOVEMENT SYSTEM VARIATION DIRECTORY */
 const BASE_EXERCISES = {
   'Chest': [ { name:'Bench Press', type:'Barbell', focus:'Mid Chest', emoji:'🏋️', key:'bench_press' }, { name:'Dumbbell Press', type:'Dumbbell', focus:'Mid Chest', emoji:'🏋️', key:'db_press' }, { name:'Machine Incline Press', type:'Machine', focus:'Upper Chest', emoji:'🦾', key:'mach_inc_press' }, { name:'Machine Pec Deck Fly', type:'Machine', focus:'Inner Chest', emoji:'🦋', key:'mach_pec_deck' } ],
@@ -1202,7 +1205,6 @@ function renderProgress() {
 }
 
 function renderHeatmap() {
- {
   const container = document.getElementById('heatmap-visual');
   container.innerHTML = '';
   
@@ -1359,7 +1361,9 @@ function renderExerciseList() {
       if(last && ex.type === 'Cardio_Treadmill' && last.cardioData) lt = `Prior: ${last.cardioData.time}m @ ${last.cardioData.speed} s`; else if (last && last.sets?.length) lt = `Prior: ${last.sets[0].weight}${last.sets[0].unit} × ${last.sets[0].reps}`;
       
       const el = document.createElement('div'); el.className = 'neo-card exercise-item stagger-item'; el.onclick = () => openLog(ex); 
-      el.innerHTML = `<div class="exercise-icon">${ex.emoji || \'⚙️\'}</div><div class="exercise-info"><div class="exercise-name" style="display:flex; justify-content:space-between; align-items:center;"><span>${escapeHTML(ex.name)}${checkIcon}</span><span style="cursor:pointer; opacity:0.7; font-size:16px; padding:0 10px;" onclick="event.stopPropagation(); openEditExerciseModal(state.selectedMuscle, ex.key, escapeHTML(ex.name), ex.type)">✏️</span></div><div class="exercise-type">${escapeHTML(ex.type)} • <span class="focus-text">${escapeHTML(ex.focus)}</span></div>${lt ? `<div class="exercise-last">${escapeHTML(lt)}</div>`:``}</div>`; l.appendChild(el);
+      el.innerHTML = `<div class="exercise-icon">${ex.emoji || '⚙️'}</div><div class="exercise-info"><div class="exercise-name" style="display:flex; justify-content:space-between; align-items:center;"><span>${escapeHTML(ex.name)}${checkIcon}</span><span class="edit-ex-btn" style="cursor:pointer; opacity:0.7; font-size:16px; padding:0 10px;">✏️</span></div><div class="exercise-type">${escapeHTML(ex.type)} • <span class="focus-text">${escapeHTML(ex.focus)}</span></div>${lt ? `<div class="exercise-last">${escapeHTML(lt)}</div>`:``}</div>`; 
+      el.querySelector('.edit-ex-btn').addEventListener('click', (evt) => { evt.stopPropagation(); openEditExerciseModal(state.selectedMuscle, ex.key, ex.name, ex.type); });
+      l.appendChild(el);
     });
   }
   if(state.selectedMuscle!=='Cardio'){ const b = document.createElement('div'); b.className = 'add-custom-ex-btn stagger-item'; b.innerHTML = `<span>➕ Build Custom Movement</span>`; b.onclick = () => document.getElementById('custom-ex-modal').classList.add('show'); l.appendChild(b); }
