@@ -491,8 +491,21 @@
 
     <div class="analytics-summary" id="analytics-summary"></div>
 
-    <div class="section-heading" style="margin-top:4px;">Exercise Progress</div>
-    <div class="exercise-progress-list" id="exercise-progress-list"></div>
+    <div class="section-heading" style="margin-top:4px;">Top Ranked Movements</div>
+    <div id="top-ranks-container" style="padding: 0 24px; margin-bottom: 20px; display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;"></div>
+
+    <div class="section-heading" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>Performance Chart</span>
+        <select id="chart-metric-toggle" style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.1); color:var(--accent-gold); border-radius:8px; padding:4px 8px; font-size:12px; outline:none;" onchange="renderProgress()">
+            <option value="volume">Max Weight</option>
+            <option value="dropoff">Rep Drop-off</option>
+        </select>
+    </div>
+    <div class="prog-tabs" id="prog-tabs" style="display:flex; gap:8px; padding:0 24px 16px; overflow-x:auto;"></div>
+    
+    <div class="neo-card chart-container stagger-item" id="chart-container" style="padding:20px; text-align:center; min-height: 280px; position: relative;">
+      <canvas id="progress-chart"></canvas>
+    </div>
 
     <div class="section-heading" style="margin-top:8px;">Muscle Activity (7 Days)</div>
     <div class="neo-card chart-container stagger-item" id="heatmap-container" style="padding:20px; text-align:center;">
@@ -809,6 +822,7 @@ const DEFAULT_PLANS = {
 
 let PLANS = {};
 
+.prog-tab { padding: 6px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius-pill); font-size: 13px; font-weight: 600; color: var(--text-tertiary); cursor: pointer; transition: var(--transition); white-space: nowrap; } .prog-tab.active { background: rgba(234, 179, 8, 0.1); border-color: var(--accent-gold); color: var(--accent-gold); }
 /* COMPREHENSIVE MOVEMENT SYSTEM VARIATION DIRECTORY */
 const BASE_EXERCISES = {
   'Chest': [ { name:'Bench Press', type:'Barbell', focus:'Mid Chest', emoji:'🏋️', key:'bench_press' }, { name:'Dumbbell Press', type:'Dumbbell', focus:'Mid Chest', emoji:'🏋️', key:'db_press' }, { name:'Machine Incline Press', type:'Machine', focus:'Upper Chest', emoji:'🦾', key:'mach_inc_press' }, { name:'Machine Pec Deck Fly', type:'Machine', focus:'Inner Chest', emoji:'🦋', key:'mach_pec_deck' } ],
@@ -1023,11 +1037,16 @@ function getStrengthTier(exerciseName, maxWeight) {
   return { tier: 0, name: 'Beginner', cls: 'beginner' };
 }
 
+
+let progChartInstance = null;
+let currentChartTab = 'Chest';
+
 function renderProgress() {
   const logs = DB.logs().filter(l => l.type !== 'session_complete');
   const bw = DB.bw();
+  const metric = document.getElementById('chart-metric-toggle')?.value || 'volume';
 
-  // Calculate summary stats
+  // 1. Calculate Summary Stats
   let totalVolume = 0; const totalExercises = new Set();
   logs.forEach(l => {
     totalExercises.add(l.exercise);
@@ -1036,240 +1055,154 @@ function renderProgress() {
   const sessionDates = new Set(DB.logs().filter(l => l.type === 'session_complete').map(l => l.date));
   const totalSessions = sessionDates.size;
 
-  // Summary cards
   const summaryEl = document.getElementById('analytics-summary');
   if (summaryEl) summaryEl.innerHTML = `
-    <div class="analytics-stat">
-      <div class="analytics-stat-label">Sessions</div>
-      <div class="analytics-stat-value">${totalSessions}</div>
-    </div>
-    <div class="analytics-stat">
-      <div class="analytics-stat-label">Total Volume</div>
-      <div class="analytics-stat-value">${totalVolume >= 1000 ? (totalVolume/1000).toFixed(1) : Math.round(totalVolume)}<span>${totalVolume >= 1000 ? 'T' : bw.unit}</span></div>
-    </div>
-    <div class="analytics-stat">
-      <div class="analytics-stat-label">Exercises</div>
-      <div class="analytics-stat-value">${totalExercises.size}</div>
-    </div>
-    <div class="analytics-stat">
-      <div class="analytics-stat-label">Bodyweight</div>
-      <div class="analytics-stat-value">${bw.weight}<span>${bw.unit}</span></div>
-    </div>
+    <div class="analytics-stat"><div class="analytics-stat-label">Sessions</div><div class="analytics-stat-value">${totalSessions}</div></div>
+    <div class="analytics-stat"><div class="analytics-stat-label">Total Volume</div><div class="analytics-stat-value">${totalVolume >= 1000 ? (totalVolume/1000).toFixed(1) : Math.round(totalVolume)}<span>${totalVolume >= 1000 ? 'T' : bw.unit}</span></div></div>
+    <div class="analytics-stat"><div class="analytics-stat-label">Exercises</div><div class="analytics-stat-value">${totalExercises.size}</div></div>
+    <div class="analytics-stat"><div class="analytics-stat-label">Bodyweight</div><div class="analytics-stat-value">${bw.weight}<span>${bw.unit}</span></div></div>
   `;
 
-  // Build per-exercise data
+  // 2. Build Exercise Map for Badges & Charts
   const exerciseMap = {};
   logs.forEach(l => {
     if (!l.exercise || !l.sets || l.sets.length === 0) return;
-    if (!exerciseMap[l.exercise]) exerciseMap[l.exercise] = { name: l.exercise, sessions: {}, muscle: l.muscle || '', emoji: '' };
+    if (!exerciseMap[l.exercise]) exerciseMap[l.exercise] = { name: l.exercise, sessions: {}, muscle: l.muscle || '' };
+    
     const maxW = Math.max(...l.sets.map(s => parseFloat(s.weight) || 0));
-    if (maxW > 0) {
-      if (!exerciseMap[l.exercise].sessions[l.date] || maxW > exerciseMap[l.exercise].sessions[l.date]) {
-        exerciseMap[l.exercise].sessions[l.date] = maxW;
-      }
+    
+    let dropoff = null;
+    if (l.sets.length >= 2) {
+        let r1 = parseFloat(l.sets[0].reps) || 0;
+        let r2 = parseFloat(l.sets[1].reps) || 0;
+        if (r1 > 0 && r2 > 0) dropoff = r1 - r2;
+    }
+
+    if (!exerciseMap[l.exercise].sessions[l.date]) {
+        exerciseMap[l.exercise].sessions[l.date] = { maxW: 0, dropoff: null };
+    }
+    
+    if (maxW > exerciseMap[l.exercise].sessions[l.date].maxW) {
+        exerciseMap[l.exercise].sessions[l.date].maxW = maxW;
+    }
+    if (dropoff !== null && exerciseMap[l.exercise].sessions[l.date].dropoff === null) {
+        exerciseMap[l.exercise].sessions[l.date].dropoff = dropoff;
     }
   });
 
-  // Find emoji
-  for (const exName of Object.keys(exerciseMap)) {
-    for (const muscle of Object.keys(BASE_EXERCISES)) {
-      const found = BASE_EXERCISES[muscle].find(e => e.name === exName);
-      if (found) { exerciseMap[exName].emoji = found.emoji || ''; break; }
-    }
-    if (!exerciseMap[exName].emoji) {
-      const customs = DB.customExercises();
-      for (const muscle of Object.keys(customs)) {
-        const found = customs[muscle].find(c => c.name === exName);
-        if (found) { exerciseMap[exName].emoji = found.emoji || ''; break; }
+  // Calculate top ranks
+  let rankedEx = [];
+  for (const exName in exerciseMap) {
+      let maxOverall = 0;
+      for (const d in exerciseMap[exName].sessions) {
+          if (exerciseMap[exName].sessions[d].maxW > maxOverall) maxOverall = exerciseMap[exName].sessions[d].maxW;
       }
-    }
+      const tier = getStrengthTier(exName, maxOverall);
+      if (tier.tier >= 0) {
+          rankedEx.push({ name: exName, tier: tier.tier, tierCls: tier.cls, tierName: tier.name });
+      }
   }
-
-  const listEl = document.getElementById('exercise-progress-list');
-  if (!listEl) return;
-  const exercises = Object.values(exerciseMap).filter(e => Object.keys(e.sessions).length > 0);
-  exercises.sort((a, b) => Math.max(...Object.values(b.sessions)) - Math.max(...Object.values(a.sessions)));
-
-  if (exercises.length === 0) {
-    listEl.innerHTML = '<div class="no-data-msg"><span>No exercise data logged yet.</span></div>';
-    renderHeatmap();
-    return;
-  }
-
-  listEl.innerHTML = '';
-  exercises.forEach(ex => {
-    const dates = Object.keys(ex.sessions).sort();
-    const values = dates.map(d => ex.sessions[d]);
-    const currentMax = Math.max(...values);
-    const tier = getStrengthTier(ex.name, currentMax);
-    const unit = bw.unit || 'kg';
-
-    const card = document.createElement('div');
-    card.className = 'exercise-progress-card';
-    card.onclick = () => openExerciseDetail(ex.name, ex.sessions, ex.emoji);
-
-    const tierBadge = tier.tier >= 0 ? `<span class="strength-badge ${tier.cls}">${tier.name}</span>` : '';
-    const safeId = ex.name.replace(/[^a-zA-Z0-9]/g,'_');
-    card.innerHTML = `
-      <div class="ep-icon">${ex.emoji || '\u2699\uFE0F'}</div>
-      <div class="ep-info">
-        <div class="ep-name">${escapeHTML(ex.name)}</div>
-        <div class="ep-meta">${tierBadge}<span>${dates.length} session${dates.length!==1?'s':''}</span></div>
-      </div>
-      <canvas class="ep-sparkline" id="spark-${safeId}"></canvas>
-      <div class="ep-max">
-        <div class="ep-max-val">${currentMax}</div>
-        <div class="ep-max-unit">${unit}</div>
-      </div>
-    `;
-    listEl.appendChild(card);
-
-    // Draw sparkline
-    setTimeout(() => {
-      const canvas = card.querySelector('canvas');
-      if (!canvas || values.length === 0) return;
-      const ctx2 = canvas.getContext('2d');
-      // Ensure canvas has dimensions, wait if 0
-      if (canvas.offsetWidth === 0) return;
-      
-      const w2 = canvas.width = canvas.offsetWidth * 2;
-      const h2 = canvas.height = canvas.offsetHeight * 2;
-      ctx2.scale(2, 2);
-      const cw = canvas.offsetWidth, ch = canvas.offsetHeight;
-      const minV = Math.min(...values) * 0.9, maxV = Math.max(...values) * 1.1;
-      const range = maxV - minV || 1;
-
-      ctx2.beginPath();
-      ctx2.strokeStyle = '#eab308';
-      ctx2.lineWidth = 2;
-      ctx2.lineJoin = 'round';
-      ctx2.lineCap = 'round';
-      
-      if (values.length === 1) {
-        ctx2.moveTo(0, ch/2);
-        ctx2.lineTo(cw, ch/2);
+  rankedEx.sort((a,b) => b.tier - a.tier); // Highest tier first
+  const topRanksEl = document.getElementById('top-ranks-container');
+  if (topRanksEl) {
+      topRanksEl.innerHTML = '';
+      if (rankedEx.length === 0) {
+          topRanksEl.innerHTML = '<span style="font-size:12px; color:var(--text-tertiary);">No ranked exercises yet. Keep lifting!</span>';
       } else {
-        values.forEach((v, i) => {
-          const x = (i / (values.length - 1)) * cw;
-          const y = ch - ((v - minV) / range) * ch;
-          if (i === 0) ctx2.moveTo(x, y); else ctx2.lineTo(x, y);
-        });
+          rankedEx.slice(0, 5).forEach(r => {
+              const b = document.createElement('div');
+              b.style.cssText = 'background:var(--bg-card); padding:8px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:4px; min-width:110px; flex-shrink:0;';
+              b.innerHTML = `<span class="strength-badge ${r.tierCls}" style="font-size:10px; align-self:flex-start;">${r.tierName}</span><span style="font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(r.name)}</span>`;
+              topRanksEl.appendChild(b);
+          });
       }
-      ctx2.stroke();
+  }
 
-      ctx2.lineTo(cw, ch);
-      ctx2.lineTo(0, ch);
-      ctx2.closePath();
-      const grad = ctx2.createLinearGradient(0, 0, 0, ch);
-      grad.addColorStop(0, 'rgba(234,179,8,0.2)');
-      grad.addColorStop(1, 'rgba(234,179,8,0)');
-      ctx2.fillStyle = grad;
-      ctx2.fill();
-      
-      // Draw a dot for the latest value
-      const lastX = cw;
-      const lastY = values.length === 1 ? ch/2 : ch - ((values[values.length-1] - minV) / range) * ch;
-      ctx2.beginPath();
-      ctx2.arc(lastX - 3, lastY, 3, 0, Math.PI * 2);
-      ctx2.fillStyle = '#eab308';
-      ctx2.fill();
-    }, 150);
+  // Build chart tabs
+  const availableMuscles = new Set();
+  Object.values(exerciseMap).forEach(e => {
+      if (Object.keys(e.sessions).length > 0) availableMuscles.add(e.muscle);
   });
+  const sortedMuscles = Array.from(availableMuscles).sort();
+  const tabsEl = document.getElementById('prog-tabs');
+  if (tabsEl && sortedMuscles.length > 0) {
+      if (!sortedMuscles.includes(currentChartTab)) currentChartTab = sortedMuscles[0];
+      tabsEl.innerHTML = '';
+      sortedMuscles.forEach(m => {
+          const btn = document.createElement('div');
+          btn.className = 'prog-tab ' + (m === currentChartTab ? 'active' : '');
+          btn.textContent = m;
+          btn.onclick = () => { currentChartTab = m; renderProgress(); };
+          tabsEl.appendChild(btn);
+      });
+  } else if (tabsEl) {
+      tabsEl.innerHTML = '<span style="font-size:12px; color:var(--text-tertiary);">No data for charts.</span>';
+  }
+
+  // Chart Rendering
+  if (progChartInstance) { progChartInstance.destroy(); progChartInstance = null; }
+  const canvas = document.getElementById('progress-chart');
+  if (!canvas || sortedMuscles.length === 0) { renderHeatmap(); return; }
+  
+  const ctx = canvas.getContext('2d');
+  const tabExs = Object.values(exerciseMap).filter(e => e.muscle === currentChartTab);
+  const datasets = [];
+  const colors = ['#eab308', '#3b82f6', '#10b981', '#f43f5e', '#8b5cf6'];
+  let labelsSet = new Set();
+
+  tabExs.forEach((ex, idx) => {
+      let dates = Object.keys(ex.sessions).sort();
+      let validDates = dates;
+      
+      if (metric === 'dropoff') {
+          validDates = dates.filter(d => ex.sessions[d].dropoff !== null);
+      }
+      validDates.forEach(d => labelsSet.add(d));
+      
+      if (validDates.length > 0) {
+          datasets.push({
+              label: ex.name,
+              data: validDates.map(d => ({ x: d, y: metric === 'dropoff' ? ex.sessions[d].dropoff : ex.sessions[d].maxW })),
+              borderColor: colors[idx % colors.length],
+              backgroundColor: colors[idx % colors.length],
+              tension: 0.4,
+              borderWidth: 3,
+              pointRadius: 4,
+              pointBackgroundColor: '#0f0f0f',
+              pointBorderColor: colors[idx % colors.length],
+              pointBorderWidth: 2
+          });
+      }
+  });
+
+  const sortedLabels = Array.from(labelsSet).sort();
+
+  if (datasets.length > 0) {
+      setTimeout(() => {
+          if(canvas.offsetWidth === 0) return;
+          Chart.defaults.color = '#999';
+          Chart.defaults.font.family = 'Inter';
+          progChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: { labels: sortedLabels, datasets: datasets },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 15, color: '#f5f5f5' } } },
+              scales: {
+                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { maxTicksLimit: 6 } },
+                y: { grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: metric === 'dropoff' ? 'Rep Drop-off (Set 1 - Set 2)' : 'Max Weight' } }
+              },
+              interaction: { intersect: false, mode: 'index' }
+            }
+          });
+      }, 100);
+  }
 
   renderHeatmap();
 }
 
-let detailChart = null;
-function openExerciseDetail(name, sessions, emoji) {
-  const overlay = document.getElementById('ep-detail-overlay');
-  document.getElementById('ep-detail-title').textContent = (emoji ? emoji + ' ' : '') + name;
-  overlay.classList.add('show');
-
-  const dates = Object.keys(sessions).sort();
-  const values = dates.map(d => sessions[d]);
-  const currentMax = Math.max(...values);
-  const bw = DB.bw();
-  const tier = getStrengthTier(name, currentMax);
-  const improvement = values.length >= 2 ? values[values.length-1] - values[0] : 0;
-
-  const statsEl = document.getElementById('ep-detail-stats');
-  statsEl.innerHTML = `
-    <div class="ep-detail-stat">
-      <div class="ep-detail-stat-label">Current Max</div>
-      <div class="ep-detail-stat-value">${currentMax}<span style="font-size:12px;color:var(--text-tertiary);"> ${bw.unit}</span></div>
-    </div>
-    <div class="ep-detail-stat">
-      <div class="ep-detail-stat-label">${tier.tier >= 0 ? 'Rank' : 'Sessions'}</div>
-      <div class="ep-detail-stat-value" style="font-size:${tier.tier >= 0 ? '14' : '20'}px;">${tier.tier >= 0 ? '<span class="strength-badge ' + tier.cls + '" style="font-size:12px;padding:4px 10px;">' + tier.name + '</span>' : dates.length}</div>
-    </div>
-    <div class="ep-detail-stat">
-      <div class="ep-detail-stat-label">Progress</div>
-      <div class="ep-detail-stat-value" style="color:${improvement >= 0 ? '#34d399' : '#f43f5e'}">${improvement >= 0 ? '+' : ''}${improvement}<span style="font-size:12px;color:var(--text-tertiary);"> ${bw.unit}</span></div>
-    </div>
-  `;
-
-  if (detailChart) detailChart.destroy();
-  setTimeout(() => {
-    const ctx = document.getElementById('ep-detail-chart-canvas').getContext('2d');
-    let g = ctx.createLinearGradient(0, 0, 0, 220);
-    g.addColorStop(0, 'rgba(234,179,8,0.25)');
-    g.addColorStop(1, 'rgba(234,179,8,0)');
-    
-    // Add logic for single point graph (Chart.js doesn't draw points natively on a 1-point dataset without this config change or 2nd point)
-    let displayData = values;
-    let displayLabels = dates.map(d => d.substring(5));
-    if (values.length === 1) {
-       displayData = [values[0], values[0]];
-       displayLabels = [displayLabels[0], displayLabels[0]];
-    }
-
-    detailChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: displayLabels,
-        datasets: [{
-          data: displayData,
-          borderColor: '#eab308',
-          backgroundColor: g,
-          borderWidth: 3,
-          fill: true,
-          tension: 0.4,
-          pointBackgroundColor: '#eab308',
-          pointBorderColor: '#0f0f0f',
-          pointBorderWidth: 2,
-          pointRadius: 5,
-          pointHoverRadius: 8
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#1a1a1a',
-            borderColor: 'rgba(255,255,255,0.1)',
-            borderWidth: 1,
-            titleColor: '#eab308',
-            bodyColor: '#999',
-            padding: 12,
-            callbacks: { label: (c) => `${c.raw} ${bw.unit}` }
-          }
-        },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: '#999', font: { weight: '700', size: 11 } } },
-          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#999', font: { weight: '700', size: 11 } } }
-        }
-      }
-    });
-  }, 100);
-}
-
-function closeExerciseDetail() {
-  document.getElementById('ep-detail-overlay').classList.remove('show');
-  if (detailChart) { detailChart.destroy(); detailChart = null; }
-}
 function renderHeatmap() {
+ {
   const container = document.getElementById('heatmap-visual');
   container.innerHTML = '';
   
@@ -1320,21 +1253,92 @@ function renderHeatmap() {
 /* ============================================================
    CLEAN CORES COMPONENT WRAPS
    ============================================================ */
+
+let currentEditExercise = null;
+function openEditExerciseModal(muscle, key, name, type) {
+    currentEditExercise = { muscle, key, oldName: name };
+    document.getElementById('edit-ex-name').value = name;
+    document.getElementById('edit-ex-type').value = type;
+    document.getElementById('edit-exercise-modal').classList.add('show');
+}
+function saveEditedExercise() {
+    if (!currentEditExercise) return;
+    const newName = document.getElementById('edit-ex-name').value.trim();
+    const newType = document.getElementById('edit-ex-type').value;
+    if (!newName) return showToast('Name required');
+    
+    const { muscle, key, oldName } = currentEditExercise;
+    
+    // Create/update custom exercise
+    const customExs = DB.customExercises();
+    if (!customExs[muscle]) customExs[muscle] = [];
+    
+    // Check if it already exists in custom
+    let existing = customExs[muscle].find(e => e.key === key || e.name === oldName);
+    if (existing) {
+        existing.name = newName;
+        existing.type = newType;
+    } else {
+        // Find in base to copy emoji/focus
+        let baseEx = (BASE_EXERCISES[muscle] || []).find(e => e.key === key || e.name === oldName);
+        customExs[muscle].push({
+            name: newName,
+            type: newType,
+            focus: baseEx ? baseEx.focus : '',
+            emoji: baseEx ? baseEx.emoji : '⚙️',
+            key: key || ('custom_'+Date.now())
+        });
+    }
+    DB.set('ft_custom_exercises', customExs);
+    
+    // Update all past logs
+    let logs = DB.logs();
+    let updated = false;
+    logs.forEach(l => {
+        if (l.exercise === oldName) {
+            l.exercise = newName;
+            l.exerciseType = newType;
+            updated = true;
+        }
+    });
+    if (updated) DB.saveLogs(logs);
+    
+    document.getElementById('edit-exercise-modal').classList.remove('show');
+    showToast('Exercise updated');
+    renderExerciseList();
+}
+
 function openLog(ex) { 
     state.selectedExercise = ex; 
-    currentSessionLogId = Date.now(); 
     document.getElementById('log-badge').textContent = state.selectedMuscle; 
     document.getElementById('log-title').textContent = ex.name; 
     document.getElementById('log-notes').value = ''; 
     const logs = DB.getLogsForExercise(ex.name); 
-    const last = logs.length ? logs[logs.length-1]:null; 
-    if(ex.type.startsWith('Cardio_')){ 
-        cardioData = last && last.cardioData ? {...last.cardioData, calories:0, fat:0}:{time:'',speed:'',incline:'',rate:'',calories:0,fat:0}; 
-        renderCardioUI(ex.type); 
-    } else { 
-        logSets = last && last.sets ? last.sets.map(s=>({...s})):[{reps:'',weight:'',unit:DB.bw().unit==='lbs'?'lbs':'kg'}]; 
-        renderSetsUI(); 
-    } 
+    
+    // Check if a log for this exercise already exists on the selected date
+    const existingLogToday = logs.find(l => l.date === state.selectedDay.dateStr && l.type !== 'session_complete');
+    
+    if (existingLogToday) {
+        currentSessionLogId = existingLogToday.id;
+        document.getElementById('log-notes').value = existingLogToday.notes || '';
+        if (ex.type.startsWith('Cardio_')) {
+            cardioData = existingLogToday.cardioData ? {...existingLogToday.cardioData} : {time:'',speed:'',incline:'',rate:'',calories:0,fat:0};
+            renderCardioUI(ex.type);
+        } else {
+            logSets = existingLogToday.sets ? existingLogToday.sets.map(s=>({...s})) : [{reps:'',weight:'',unit:DB.bw().unit==='lbs'?'lbs':'kg'}];
+            renderSetsUI();
+        }
+    } else {
+        currentSessionLogId = Date.now(); 
+        const last = logs.length ? logs[logs.length-1]:null; 
+        if(ex.type.startsWith('Cardio_')){ 
+            cardioData = last && last.cardioData ? {...last.cardioData, calories:0, fat:0}:{time:'',speed:'',incline:'',rate:'',calories:0,fat:0}; 
+            renderCardioUI(ex.type); 
+        } else { 
+            logSets = last && last.sets ? last.sets.map(s=>({...s})):[{reps:'',weight:'',unit:DB.bw().unit==='lbs'?'lbs':'kg'}]; 
+            renderSetsUI(); 
+        } 
+    }
     navigateTo('screen-log'); 
 }
 
@@ -1355,7 +1359,7 @@ function renderExerciseList() {
       if(last && ex.type === 'Cardio_Treadmill' && last.cardioData) lt = `Prior: ${last.cardioData.time}m @ ${last.cardioData.speed} s`; else if (last && last.sets?.length) lt = `Prior: ${last.sets[0].weight}${last.sets[0].unit} × ${last.sets[0].reps}`;
       
       const el = document.createElement('div'); el.className = 'neo-card exercise-item stagger-item'; el.onclick = () => openLog(ex); 
-      el.innerHTML = `<div class="exercise-icon">${ex.emoji || '⚙️'}</div><div class="exercise-info"><div class="exercise-name">${escapeHTML(ex.name)}${checkIcon}</div><div class="exercise-type">${escapeHTML(ex.type)} • <span class="focus-text">${escapeHTML(ex.focus)}</span></div>${lt ? `<div class="exercise-last">${escapeHTML(lt)}</div>`:''}</div>`; l.appendChild(el);
+      el.innerHTML = `<div class="exercise-icon">${ex.emoji || \'⚙️\'}</div><div class="exercise-info"><div class="exercise-name" style="display:flex; justify-content:space-between; align-items:center;"><span>${escapeHTML(ex.name)}${checkIcon}</span><span style="cursor:pointer; opacity:0.7; font-size:16px; padding:0 10px;" onclick="event.stopPropagation(); openEditExerciseModal(state.selectedMuscle, ex.key, escapeHTML(ex.name), ex.type)">✏️</span></div><div class="exercise-type">${escapeHTML(ex.type)} • <span class="focus-text">${escapeHTML(ex.focus)}</span></div>${lt ? `<div class="exercise-last">${escapeHTML(lt)}</div>`:``}</div>`; l.appendChild(el);
     });
   }
   if(state.selectedMuscle!=='Cardio'){ const b = document.createElement('div'); b.className = 'add-custom-ex-btn stagger-item'; b.innerHTML = `<span>➕ Build Custom Movement</span>`; b.onclick = () => document.getElementById('custom-ex-modal').classList.add('show'); l.appendChild(b); }
